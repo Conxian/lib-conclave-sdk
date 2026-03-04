@@ -722,6 +722,7 @@ version = "0.1.0"
 dependencies = [
  "aes",
  "aes-gcm",
+ "async-trait",
  "bdk",
  "bitcoin 0.32.8",
  "getrandom 0.2.17",

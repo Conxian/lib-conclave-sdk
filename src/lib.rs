@@ -23,7 +23,7 @@ mod tests {
     use crate::enclave::attestation::DeviceIntegrityReport;
     use crate::protocol::stacks::StacksManager;
     use crate::protocol::musig2::MuSig2Session;
-    use crate::protocol::rails::{RailProxy, RailType, SwapRequest};
+    use crate::protocol::rails::{RailProxy, RailType, SwapRequest, SovereignHandshake};
     use crate::protocol::affiliate::AffiliateManager;
     use secp256k1::{Secp256k1, SecretKey, PublicKey};
 
@@ -42,8 +42,8 @@ mod tests {
             recipient_address: "0x123".to_string(),
         };
 
-        // 1. Prepare intent
-        let intent = proxy.prepare_swap(req).unwrap();
+        // 1. Prepare intent using SovereignHandshake trait
+        let intent = proxy.prepare_intent(req).unwrap();
 
         // 2. Sign in enclave
         let sig_resp = manager.sign(SignRequest {
@@ -53,7 +53,7 @@ mod tests {
         }).unwrap();
 
         // 3. Broadcast
-        let response = proxy.broadcast_swap(intent, sig_resp.signature_hex).await.unwrap();
+        let response = proxy.broadcast_signed_intent(intent, sig_resp.signature_hex).await.unwrap();
         assert!(response.transaction_id.starts_with("CHG-PX-"));
     }
 
@@ -79,12 +79,16 @@ mod tests {
     }
 
     #[test]
-    fn test_stacks_signing() {
+    fn test_stacks_sovereign_signing() {
         let manager = CoreEnclaveManager::new();
         manager.derive_session_key("1234", b"salt").unwrap();
         let stacks = StacksManager::new(&manager);
 
-        let sig = stacks.sign_message("Hello Conclave", "test").unwrap();
+        // 1. Prepare
+        let intent = stacks.prepare_transaction(b"transaction_payload").unwrap();
+
+        // 2. Sign
+        let sig = stacks.sign_prepared_transaction(intent, "test").unwrap();
         assert!(!sig.is_empty());
     }
 
