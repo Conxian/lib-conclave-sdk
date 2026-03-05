@@ -107,8 +107,19 @@ impl CoreEnclaveManager {
         })
     }
 
-    fn sign_schnorr(&self, priv_key_bytes: &[u8], message_hash: &[u8]) -> ConclaveResult<SignResponse> {
-        let signing_key = k256::schnorr::SigningKey::from_bytes(priv_key_bytes.into())
+    fn sign_schnorr(&self, priv_key_bytes: &[u8], message_hash: &[u8], tweak: Option<&[u8]>) -> ConclaveResult<SignResponse> {
+        let mut secret_key = SecretKey::from_byte_array(priv_key_bytes.try_into().map_err(|_| ConclaveError::CryptoError("Key mismatch".to_string()))?)
+            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {}", e)))?;
+
+        // Apply Taproot Tweak if provided (BIP341)
+        if let Some(tweak_bytes) = tweak {
+             let scalar = secp256k1::Scalar::from_be_bytes(tweak_bytes.try_into().map_err(|_| ConclaveError::CryptoError("Invalid tweak length".to_string()))?)
+                .map_err(|e| ConclaveError::CryptoError(format!("Invalid tweak scalar: {}", e)))?;
+             secret_key = secret_key.add_tweak(&scalar)
+                .map_err(|e| ConclaveError::CryptoError(format!("Tweak addition failed: {}", e)))?;
+        }
+
+        let signing_key = k256::schnorr::SigningKey::from_bytes(secret_key.secret_bytes().as_slice().into())
             .map_err(|e| ConclaveError::CryptoError(format!("Schnorr Error: {}", e)))?;
             
         let signature: k256::schnorr::Signature = signing_key.sign(message_hash);
@@ -136,6 +147,21 @@ impl HeadlessEnclave for CoreEnclaveManager {
         Ok(key_hex)
     }
 
+    fn get_public_key(&self, derivation_path: &str) -> ConclaveResult<String> {
+        let derived_priv_key = self.derive_child_key(derivation_path)?;
+        let secp = Secp256k1::new();
+        let secret_key = SecretKey::from_byte_array(derived_priv_key.as_slice().try_into().map_err(|_| ConclaveError::CryptoError("Key mismatch".to_string()))?)
+            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {}", e)))?;
+
+        if derivation_path.contains("86'") || derivation_path.contains("schnorr") {
+             let signing_key = k256::schnorr::SigningKey::from_bytes(secret_key.secret_bytes().as_slice().into())
+                .map_err(|e| ConclaveError::CryptoError(format!("Schnorr Error: {}", e)))?;
+             Ok(hex::encode(signing_key.verifying_key().to_bytes()))
+        } else {
+             Ok(hex::encode(secret_key.public_key(&secp).serialize()))
+        }
+    }
+
     fn sign(&self, request: SignRequest) -> ConclaveResult<SignResponse> {
         if request.message_hash.len() != 32 {
             return Err(ConclaveError::InvalidPayload);
@@ -144,7 +170,7 @@ impl HeadlessEnclave for CoreEnclaveManager {
         let mut derived_priv_key = self.derive_child_key(&request.derivation_path)?;
 
         let response = if request.derivation_path.contains("86'") || request.derivation_path.contains("schnorr") {
-            self.sign_schnorr(&*derived_priv_key, &request.message_hash)
+            self.sign_schnorr(&*derived_priv_key, &request.message_hash, request.taproot_tweak.as_deref())
         } else {
             self.sign_ecdsa(&*derived_priv_key, &request.message_hash)
         };

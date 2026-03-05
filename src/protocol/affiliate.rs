@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use crate::{ConclaveResult, enclave::{SignRequest, HeadlessEnclave}};
+use rand::Rng;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AffiliateProof {
@@ -8,6 +9,7 @@ pub struct AffiliateProof {
     pub user_id: String,
     pub timestamp: u64,
     pub expiration: u64,
+    pub nonce: [u8; 16],
     pub signature: String,
 }
 
@@ -23,11 +25,16 @@ impl<'a> AffiliateManager<'a> {
     /// Generates a signed proof of referral.
     /// This ensures that affiliate links cannot be spoofed and conversions
     /// are cryptographically linked to a valid user session.
+    /// Includes a nonce to prevent replay attacks.
     pub fn generate_referral_proof(&self, partner_id: &str, user_id: &str) -> ConclaveResult<AffiliateProof> {
         let timestamp = 1710000000; // Mock timestamp
         let ttl = 3600; // 1 hour TTL
         let expiration = timestamp + ttl;
-        let message = format!("{}:{}:{}:{}", partner_id, user_id, timestamp, expiration);
+
+        let mut nonce = [0u8; 16];
+        rand::rng().fill_bytes(&mut nonce);
+
+        let message = format!("{}:{}:{}:{}:{}", partner_id, user_id, timestamp, expiration, hex::encode(nonce));
 
         let mut hasher = sha2::Sha256::new();
         hasher.update(message.as_bytes());
@@ -37,6 +44,7 @@ impl<'a> AffiliateManager<'a> {
             message_hash,
             derivation_path: "m/44'/5757'/0'/0/affiliate".to_string(),
             key_id: "affiliate_key".to_string(),
+            taproot_tweak: None,
         };
 
         let response = self.enclave.sign(request)?;
@@ -46,6 +54,7 @@ impl<'a> AffiliateManager<'a> {
             user_id: user_id.to_string(),
             timestamp,
             expiration,
+            nonce,
             signature: response.signature_hex,
         })
     }
