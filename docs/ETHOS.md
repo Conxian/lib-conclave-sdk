@@ -8,9 +8,9 @@
 - [x] SDK Hardware Abstraction (Headless/Android)
 - [x] Stacks CLP Security & Math Fixes (CON-15)
 - [x] Affiliate/Marketing Secure Integration
-- [ ] Real Rails Deployment (Changelly, Bisq, Wormhole)
-- [ ] Hardware Attestation Activation
-- [ ] Native Bitcoin Taproot Integration (Superior Upgrade)
+- [x] Real Rails Deployment (Changelly, Bisq, Wormhole) - Logic & Validation
+- [x] Hardware Attestation Activation (Integrated with RailProxy)
+- [x] Native Bitcoin Taproot Integration (Superior Upgrade: BIP341 Native Tweaks)
 
 ## Real Rails Implementation
 - **Changelly Proxy**: Centralized liquidity partner for fast swaps. Integrated via secure proxy to hide user metadata.

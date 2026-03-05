@@ -5,7 +5,10 @@ The core Rust SDK for Conclave, providing cross-platform hardware enclave abstra
 ## Features
 
 - **Hardware-Backed Security**: Interfaces with secure hardware (StrongBox/TEE) for key generation and signing.
+- **Hardware Attestation**: Cryptographic proof of device integrity (StrongBox/TEE) mandatory for high-value rail operations.
+- **Sovereign Handshake**: Non-custodial signing protocol ensuring "Zero Secret Egress" for all cross-chain swaps.
 - **Multi-Chain Support**: Native support for ECDSA (EVM, Bitcoin, Stacks) and Schnorr (Taproot, RGB, BitVM).
+- **Superior Taproot Support**: Native BIP341 tweak calculation and signing within the secure enclave.
 - **MuSig2 Orchestration**: Simplified API for M-of-N multi-signature protocols.
 - **Stacks Support**: Specialized handlers for Stacks message signing and transaction payload formatting.
 - **WebAssembly Bindings**: Fully compatible with WASM for browser-based secure key management.
@@ -14,8 +17,8 @@ The core Rust SDK for Conclave, providing cross-platform hardware enclave abstra
 
 The SDK is organized into three main layers:
 
-1.  **Enclave Layer** (`src/enclave`): Abstracted hardware interfaces. The `CoreEnclaveManager` provides a deterministic headless implementation for WASM.
-2.  **Protocol Layer** (`src/protocol`): Multi-chain and multi-sig logic (MuSig2, Stacks).
+1.  **Enclave Layer** (`src/enclave`): Abstracted hardware interfaces. The `CoreEnclaveManager` provides a deterministic headless implementation for WASM with PBKDF2 session key derivation and secure zeroization.
+2.  **Protocol Layer** (`src/protocol`): Multi-chain and multi-sig logic (MuSig2, Stacks, Bitcoin Taproot, Sovereign Rails, Secure Affiliate Attribution).
 3.  **Binding Layer** (`src/wasm_bindings.rs`): Clean JavaScript/TypeScript interfaces for high-level integration.
 
 ## Usage (WASM)
