@@ -22,11 +22,9 @@ mod tests {
     use crate::enclave::{HeadlessEnclave, SignRequest};
     use crate::enclave::attestation::DeviceIntegrityReport;
     use crate::protocol::stacks::StacksManager;
-    use crate::protocol::musig2::MuSig2Session;
     use crate::protocol::rails::{RailProxy, RailType, SwapRequest, SovereignHandshake};
     use crate::protocol::affiliate::AffiliateManager;
     use crate::protocol::bitcoin::TaprootManager;
-    use secp256k1::{Secp256k1, SecretKey, PublicKey};
 
     #[tokio::test]
     async fn test_sovereign_rail_swap_btc() {
@@ -52,10 +50,16 @@ mod tests {
             message_hash: intent.signable_hash.clone(),
             derivation_path: "m/44'/0'/0'/0/0".to_string(),
             key_id: "test".to_string(),
+            taproot_tweak: None,
         }).unwrap();
 
         // 3. Broadcast
-        let response = proxy.broadcast_signed_intent(intent, sig_resp.signature_hex).await.unwrap();
+        let response = proxy.broadcast_signed_intent(
+            intent,
+            sig_resp.signature_hex,
+            sig_resp.device_attestation
+        ).await.unwrap();
+
         assert!(response.transaction_id.starts_with("CHG-PX-"));
     }
 
@@ -82,6 +86,7 @@ mod tests {
             message_hash: message_hash.clone(),
             derivation_path: "m/44'/0'/0'/0/0".to_string(),
             key_id: "test".to_string(),
+            taproot_tweak: None,
         };
 
         let response = manager.sign(request).unwrap();

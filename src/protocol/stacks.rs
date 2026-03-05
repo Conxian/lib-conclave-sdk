@@ -44,6 +44,7 @@ impl<'a> StacksManager<'a> {
             message_hash: intent.message_hash,
             derivation_path: "m/44'/5757'/0'/0/0".to_string(),
             key_id: key_id.to_string(),
+            taproot_tweak: None,
         };
 
         let response = self.enclave.sign(request)?;
@@ -67,6 +68,7 @@ impl<'a> StacksManager<'a> {
             message_hash,
             derivation_path: "m/44'/5757'/0'/0/0".to_string(),
             key_id: key_id.to_string(),
+            taproot_tweak: None,
         };
 
         let response = self.enclave.sign(request)?;

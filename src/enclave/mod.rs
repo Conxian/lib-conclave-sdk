@@ -9,6 +9,7 @@ pub struct SignRequest {
     pub message_hash: Vec<u8>,
     pub derivation_path: String,
     pub key_id: String,
+    pub taproot_tweak: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +29,9 @@ pub trait HeadlessEnclave {
     
     /// Generate a new keypair within the secure hardware.
     fn generate_key(&self, key_id: &str) -> ConclaveResult<String>;
+
+    /// Retrieve the public key for a specific derivation path.
+    fn get_public_key(&self, derivation_path: &str) -> ConclaveResult<String>;
     
     /// Sign a raw payload using the hardware-backed key.
     fn sign(&self, request: SignRequest) -> ConclaveResult<SignResponse>;
