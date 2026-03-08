@@ -1,5 +1,6 @@
 pub mod enclave;
 pub mod protocol;
+pub mod telemetry;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_bindings;
