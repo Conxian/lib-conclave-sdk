@@ -34,6 +34,3 @@ pub trait EnclaveManager: Send + Sync {
     /// Sign a raw payload using the hardware-backed key.
     fn sign(&self, request: SignRequest) -> ConclaveResult<SignResponse>;
 }
-
-/// Alias for backward compatibility during transition
-pub use EnclaveManager as HeadlessEnclave;

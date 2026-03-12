@@ -4,6 +4,8 @@ use crate::enclave::android_strongbox::CoreEnclaveManager;
 use crate::protocol::business::{BusinessManager, BusinessRegistry, BusinessProfile};
 use crate::protocol::asset::{AssetRegistry, Asset, AssetIdentifier};
 use crate::protocol::rails::{RailProxy, SwapRequest, SovereignHandshake, ChangellyRail, BisqRail, WormholeRail};
+use crate::protocol::stacks::StacksManager;
+use crate::protocol::bitcoin::TaprootManager;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -44,9 +46,6 @@ impl ConclaveWasmClient {
             public_key: public_key.to_string(),
             active: true,
         };
-        // Note: Arc::get_mut is only possible if there are no other Arcs.
-        // For simplicity in this mock/prototype, we'll re-create the Arc or use interior mutability if needed.
-        // But since we want to align with specs, let's assume we can update it.
         let mut registry = (*self.business_registry).clone();
         registry.register_business(profile);
         self.business_registry = Arc::new(registry);
@@ -146,5 +145,50 @@ impl ConclaveWasmClient {
 
         serde_wasm_bindgen::to_value(&response)
             .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Sign a Stacks transaction payload
+    #[wasm_bindgen]
+    pub fn sign_stacks_transaction(&self, payload_hex: &str) -> Result<String, JsValue> {
+        let payload = hex::decode(payload_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid payload hex: {}", e)))?;
+
+        let stacks_mgr = StacksManager::new(&self.manager);
+        let intent = stacks_mgr.prepare_transaction(&payload)
+            .map_err(|e| JsValue::from_str(&e))?;
+
+        let signature = stacks_mgr.sign_prepared_transaction(intent, "stacks_key")
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(signature)
+    }
+
+    /// Sign a Bitcoin Taproot (BIP341) sighash
+    #[wasm_bindgen]
+    pub fn sign_bitcoin_taproot(&self, sighash_hex: &str, merkle_root_hex: Option<String>) -> Result<String, JsValue> {
+        let mut sighash = [0u8; 32];
+        let decoded_sighash = hex::decode(sighash_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid sighash hex: {}", e)))?;
+        sighash.copy_from_slice(&decoded_sighash);
+
+        let merkle_root = if let Some(mr_hex) = merkle_root_hex {
+            let mut mr = [0u8; 32];
+            let decoded_mr = hex::decode(mr_hex)
+                .map_err(|e| JsValue::from_str(&format!("Invalid merkle root hex: {}", e)))?;
+            mr.copy_from_slice(&decoded_mr);
+            Some(mr)
+        } else {
+            None
+        };
+
+        let btc_mgr = TaprootManager::new(&self.manager);
+        let signature = btc_mgr.sign_taproot_v1(
+            sighash,
+            "m/86'/0'/0'/0/0",
+            "btc_key",
+            merkle_root
+        ).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        Ok(signature)
     }
 }
