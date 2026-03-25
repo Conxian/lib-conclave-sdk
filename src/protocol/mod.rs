@@ -6,3 +6,4 @@ pub mod asset;
 pub mod bitcoin;
 pub mod fiat;
 pub mod a2p;
+pub mod mmr;
