@@ -8,6 +8,7 @@ use crate::protocol::stacks::StacksManager;
 use crate::protocol::bitcoin::TaprootManager;
 use crate::protocol::fiat::{FiatRouterService, FiatOnRampRequest};
 use crate::protocol::a2p::{A2pRouterService, OtpRequest, OtpVerificationRequest};
+use crate::state::MerkleMountainRange;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -276,5 +277,23 @@ impl ConclaveWasmClient {
         ).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
         Ok(signature)
+    }
+
+    /// Generates a Merkle Mountain Range (MMR) inclusion proof for institutional state attestation
+    #[wasm_bindgen]
+    pub fn get_mmr_proof(&self, data_hex: &str, pos: u64) -> Result<JsValue, JsValue> {
+        let data = hex::decode(data_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid data hex: {}", e)))?;
+
+        let mut mmr = MerkleMountainRange::new();
+        // In a real scenario, this would be backed by a database.
+        // For CON-59, we demonstrate the cryptographic logic.
+        mmr.append(&data);
+
+        let proof = mmr.generate_proof(pos)
+            .map_err(|e| JsValue::from_str(&e))?;
+
+        serde_wasm_bindgen::to_value(&proof)
+            .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
