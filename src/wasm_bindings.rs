@@ -1,46 +1,45 @@
 use wasm_bindgen::prelude::*;
-use crate::enclave::{SignRequest, EnclaveManager};
-use crate::enclave::android_strongbox::CoreEnclaveManager;
-use crate::protocol::business::{BusinessManager, BusinessRegistry, BusinessProfile};
-use crate::protocol::asset::{AssetRegistry, Asset, AssetIdentifier};
-use crate::protocol::rails::{RailProxy, SwapRequest, SovereignHandshake, ChangellyRail, BisqRail, WormholeRail};
+use crate::enclave::{CoreEnclaveManager, SignRequest};
+use crate::protocol::musig2::MuSig2Orchestrator;
 use crate::protocol::stacks::StacksManager;
+use crate::protocol::rails::{RailProxy, SwapRequest, ChangellyRail, BisqRail, WormholeRail};
+use crate::protocol::asset::{AssetRegistry, Asset, AssetIdentifier};
+use crate::protocol::business::{BusinessRegistry, BusinessProfile, BusinessManager};
 use crate::protocol::bitcoin::TaprootManager;
 use crate::protocol::fiat::{FiatRouterService, FiatOnRampRequest};
-use crate::protocol::a2p::{A2pRouterService, OtpRequest, OtpVerificationRequest};
-use crate::state::MerkleMountainRange;
-use std::collections::HashMap;
+use crate::protocol::a2p::{A2pRouterService, OtpRequest};
+use crate::protocol::mmr::MerkleMountainRange;
+use crate::protocol::job_card::{ConxianJobCard, Iso20022Wrapper};
 use std::sync::Arc;
+use std::collections::HashMap;
 
 #[wasm_bindgen]
 pub struct ConclaveWasmClient {
     manager: CoreEnclaveManager,
-    business_registry: Arc<BusinessRegistry>,
     asset_registry: Arc<AssetRegistry>,
+    business_registry: Arc<BusinessRegistry>,
 }
 
 #[wasm_bindgen]
 impl ConclaveWasmClient {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        ConclaveWasmClient {
+        Self {
             manager: CoreEnclaveManager::new(),
-            business_registry: Arc::new(BusinessRegistry::new()),
             asset_registry: Arc::new(AssetRegistry::new()),
+            business_registry: Arc::new(BusinessRegistry::new()),
         }
     }
 
-    /// Derives the session key from a PIN and salt
+    /// Sets the session key for the enclave using PBKDF2-HMAC-SHA512.
     #[wasm_bindgen]
-    pub fn set_session_key(&self, pin: &str, salt_hex: &str) -> Result<(), JsValue> {
-        let salt = hex::decode(salt_hex)
-            .map_err(|e| JsValue::from_str(&format!("Invalid salt hex: {}", e)))?;
-
-        self.manager.derive_session_key(pin, &salt)
+    pub fn set_session_key(&mut self, pin: &str, salt_hex: &str) -> Result<(), JsValue> {
+        let salt = hex::decode(salt_hex).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        self.manager.initialize_session(pin, &salt)
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
-    /// Registers a business profile for attribution
+    /// Registers a business partner in the registry
     #[wasm_bindgen]
     pub fn register_business(&mut self, id: &str, name: &str, public_key: &str) {
         let profile = BusinessProfile {
@@ -295,5 +294,19 @@ impl ConclaveWasmClient {
 
         serde_wasm_bindgen::to_value(&proof)
             .map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Generates an ISO 20022 pacs.008 XML for a Job Card
+    #[wasm_bindgen]
+    pub fn generate_iso20022_pacs008(&self, sender: &str, receiver: &str, amount: f64, town: Option<String>, country: Option<String>) -> Result<String, JsValue> {
+        let card = ConxianJobCard::new(sender, receiver, amount, town, country);
+        Iso20022Wrapper::wrap_pacs008(&card).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+
+    /// Generates a JSON-LD machine-readable definition for a Job Card
+    #[wasm_bindgen]
+    pub fn generate_cjcs_json_ld(&self, sender: &str, receiver: &str, amount: f64, town: Option<String>, country: Option<String>) -> Result<String, JsValue> {
+        let card = ConxianJobCard::new(sender, receiver, amount, town, country);
+        Iso20022Wrapper::wrap_json_ld(&card).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
