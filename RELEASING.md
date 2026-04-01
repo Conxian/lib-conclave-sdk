@@ -25,7 +25,10 @@ We follow [Semantic Versioning (SemVer)](https://semver.org/).
    ```bash
    git tag -s v0.1.x -m "Release v0.1.x"
    ```
-5. **Publish**: The GitHub CI workflow (once operational) will automatically publish to crates.io upon tag push.
+5. **Publish**: Publish to crates.io manually.
+   ```bash
+   cargo publish
+   ```
 
 ## Mainnet Readiness
 
