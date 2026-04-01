@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-1. Ensure you have **Rust 1.81+** installed.
+1. Ensure you have **Rust 1.85+** installed (Edition 2024).
 2. For WebAssembly (WASM) development, install [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/).
 3. Clone the repository.
 4. Run `cargo test` to ensure the baseline is stable.
@@ -16,7 +16,7 @@ cargo build
 ```
 
 ### Running Tests
-All protocol and enclave logic is verified with unit tests:
+Run `cargo test` to execute the unit test suite:
 ```bash
 cargo test
 ```

@@ -73,6 +73,8 @@ wasm-pack build
 
 Core components are covered by automated unit tests. Run `cargo test` to execute the test suite locally.
 
+This repository does not currently link to an independent security audit report.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
