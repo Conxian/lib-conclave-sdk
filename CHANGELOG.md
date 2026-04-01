@@ -18,8 +18,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WebAssembly (WASM) bindings for browser integration.
 - Telemetry integration for signature tracking.
 - Modular Rail system (Changelly, Bisq, Wormhole, Boltz, NTT).
-
-## [0.1.0] - YYYY-MM-DD
-
-### Added
-- Initial release.
