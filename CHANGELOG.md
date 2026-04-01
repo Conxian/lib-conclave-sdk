@@ -1,0 +1,20 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Initial implementation of the core Conclave SDK.
+- Support for Android StrongBox and Cloud TEE hardware enclaves.
+- Sovereign Handshake protocol for non-custodial signing.
+- Business Management and Asset Registry systems.
+- Stacks (STX) message and transaction signing support.
+- Bitcoin Taproot (BIP341) native support.
+- MuSig2 signature aggregation orchestration.
+- WebAssembly (WASM) bindings for browser integration.
+- Telemetry integration for signature tracking.
+- Modular Rail system (Changelly, Bisq, Wormhole, Boltz, NTT).

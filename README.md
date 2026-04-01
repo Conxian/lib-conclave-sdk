@@ -1,6 +1,15 @@
 # lib-conclave-sdk
 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-red.svg)](SECURITY.md)
+
 The core Rust SDK for Conclave, providing cross-platform hardware enclave abstractions for Android StrongBox, Apple Secure Enclave, and Cloud TEE environments.
+
+## Repository Status
+
+- **Status**: Beta / Active Development
+- **Category**: SDK / Security Infrastructure
+- **Support**: Managed by Conxian-Labs (Urgent issues via Linear/Security)
 
 ## Features
 
@@ -47,13 +56,25 @@ const response = await client.execute_swap(
 
 ## Development
 
-Requires Rust 1.81+ (Edition 2024).
+Requires Rust 1.85+ (Edition 2024).
 
 ```bash
+# Build core Rust SDK
 cargo build
+
+# Run unit tests
 cargo test
+
+# Build WASM bindings (requires wasm-pack)
+wasm-pack build
 ```
 
-## Audit & Verification
+## Verification
 
-The SDK has undergone a full architectural audit and enhancement cycle. All core protocol features, including cryptographic attribution and hardware attestation, have been verified with automated unit tests.
+Core components are covered by automated unit tests. Run `cargo test` to execute the test suite locally.
+
+This repository does not currently link to an independent security audit report.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
