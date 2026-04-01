@@ -2,9 +2,30 @@
 
 ## Getting Started
 
-1. Ensure you have Rust 1.81+ installed.
-2. Clone the repository.
-3. Run `cargo test` to ensure the baseline is stable.
+1. Ensure you have **Rust 1.81+** installed.
+2. For WebAssembly (WASM) development, install [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/).
+3. Clone the repository.
+4. Run `cargo test` to ensure the baseline is stable.
+
+## Development Workflow
+
+### Building the SDK
+To build the core Rust SDK:
+```bash
+cargo build
+```
+
+### Running Tests
+All protocol and enclave logic is verified with unit tests:
+```bash
+cargo test
+```
+
+### WASM Bindings
+To build the WASM package for web environments:
+```bash
+wasm-pack build
+```
 
 ## Bounty Workflow
 
@@ -20,3 +41,4 @@ We use a community-driven bounty model for many features and bug fixes.
 - **No Panics**: Avoid `unwrap()`, `expect()`, or `panic!()` in non-test code. Return a `ConclaveError` instead.
 - **Constant Time**: Use the `subtle` crate for sensitive comparisons.
 - **Zeroization**: Ensure sensitive material is zeroized after use using the `zeroize` crate.
+- **Async Traits**: Use `#[async_trait]` for protocol interfaces to maintain cross-platform compatibility.
