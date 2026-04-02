@@ -32,7 +32,7 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
 4. **Create Git Tag**: Create a signed git tag for the release.
    ```bash
    git tag -s vX.Y.Z -m "Release vX.Y.Z"
-   git push origin master --follow-tags
+   git push origin HEAD --follow-tags
    ```
 5. **Publish to crates.io**:
    ```bash
@@ -40,10 +40,10 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
    ```
 6. **Publish WASM Package (if applicable)**: Publish the generated WASM npm package from `pkg/` after inspecting what will be shipped.
    ```bash
-   # Inspect the ./pkg/ contents that will be shipped to npm (generated in step 3)
-   (cd pkg && npm pack --dry-run)
-   # Publish the inspected artifact from ./pkg/
-   (cd pkg && npm publish --access public)
+   cd pkg
+   TARBALL="$(npm pack)"
+   tar -tzf "$TARBALL"
+   npm publish "$TARBALL"
    ```
 
 ## Mainnet Readiness & Security
