@@ -32,7 +32,7 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
 4. **Create Git Tag**: Create a signed git tag for the release.
    ```bash
    git tag -s vX.Y.Z -m "Release vX.Y.Z"
-   git push origin HEAD --follow-tags
+   git push origin master --follow-tags
    ```
 5. **Publish to crates.io**:
    ```bash
