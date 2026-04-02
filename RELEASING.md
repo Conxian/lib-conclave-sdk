@@ -42,5 +42,5 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
 ## Mainnet Readiness & Security
 
 - **Audit Requirements**: Versions >= 1.0.0 require a formal, independent security audit of the `Sovereign Handshake` and `EnclaveManager` implementations.
-- **Dependency Hygiene**: Ensure the dependency vulnerability check from step 3 (`cargo audit`) runs and passes before every release (prefer CI as the release gate; local runs are a preflight). If advisories are found, fix them or document an explicit exception via a committed `audit.toml` policy.
+- **Dependency Hygiene**: Ensure the dependency vulnerability check from step 3 (`cargo audit`) runs and passes before every release (prefer CI as the release gate; local runs are a preflight). If advisories are found, fix them or document an explicit exception via a committed `audit.toml` policy (when an exception is required).
 - **Credential Safety**: Ensure no development secrets or artifacts are included in the published package.
