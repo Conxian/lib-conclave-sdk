@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `GOVERNANCE.md` defining the SDK's business role, ownership, and integration surface.
 - Prioritized build/repair list for Mainnet Readiness in `GOVERNANCE.md`.
-- Detailed release flow and security audit requirements in `RELEASING.md`.
 - GitHub Actions CI workflow for Rust tests, linting, and WASM builds.
 - CI status badges to README.
 - `Default` implementations for core registries and managers to improve idiomatic Rust usage.
@@ -18,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Normalized SDK naming and discovery across documentation and external issue tracking.
+- Updated `RELEASING.md` with a detailed release flow and security audit requirements.
 - Improved idiomatic Rust and fixed 14 Clippy warnings across the codebase.
 - Updated documentation to reflect the current verified toolchain (Rust 1.94+).
 - Clarified repository categorization as a "Security Infrastructure SDK".
