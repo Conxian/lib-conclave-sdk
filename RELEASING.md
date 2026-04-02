@@ -43,7 +43,7 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
    cd pkg
    TARBALL="$(npm pack)"
    tar -tzf "$TARBALL"
-   npm publish "$TARBALL"
+   npm publish "$TARBALL" --access public
    ```
 
 ## Mainnet Readiness & Security
