@@ -6,9 +6,9 @@ This document outlines the process for releasing new versions of the Conclave SD
 
 We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
 
-- **Major (X.0.0)**: Incompatible API changes (e.g., refactoring `EnclaveManager` trait).
-- **Minor (0.X.0)**: Additive features in a backward-compatible manner (e.g., new `Rail` implementation).
-- **Patch (0.0.X)**: Backward-compatible bug fixes, performance improvements, and technical debt (e.g., hygiene updates).
+- **Major (`X.Y.Z` → `(X+1).0.0`)**: Incompatible API changes (e.g., refactoring `EnclaveManager` trait).
+- **Minor (`X.Y.Z` → `X.(Y+1).0`)**: Additive features in a backward-compatible manner (e.g., new `Rail` implementation).
+- **Patch (`X.Y.Z` → `X.Y.(Z+1)`)**: Backward-compatible bug fixes, performance improvements, and technical debt (e.g., hygiene updates).
 
 **Note on 0.x.y versions**: During the Beta phase (`0.x.y`), breaking changes may occur in minor releases (`0.x.0`).
 
@@ -24,6 +24,8 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
    cargo clippy -- -D warnings
    # Run the full test suite
    cargo test
+   # Check dependencies for known vulnerabilities (requires `cargo install cargo-audit`)
+   cargo audit
    # Verify WASM build compatibility
    wasm-pack build
    ```

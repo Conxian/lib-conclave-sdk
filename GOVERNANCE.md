@@ -15,7 +15,7 @@ As a shared public-facing dependency, the SDK ensures that all downstream produc
 
 ## 2. Ownership & Support
 
-- **Primary Owner**: [Conxian-Labs](https://github.com/Conxian)
+- **Primary Owner**: [Conxian](https://github.com/Conxian)
 - **Support Channel**:
   - Technical issues and feature requests should be tracked via [GitHub Issues](https://github.com/Conxian/lib-conclave-sdk/issues).
   - Security vulnerabilities MUST be reported to `security@conxian.com` as per [SECURITY.md](SECURITY.md).
@@ -26,9 +26,9 @@ As a shared public-facing dependency, the SDK ensures that all downstream produc
 ### Versioning Discipline
 We strictly follow [Semantic Versioning 2.0.0](https://semver.org/).
 
-- **Major (X.0.0)**: Breaking changes to the core API (e.g., `EnclaveManager` trait modifications).
-- **Minor (0.X.0)**: New features or significant additions (e.g., new Sovereign Rails).
-- **Patch (0.0.X)**: Bug fixes, performance improvements, and documentation updates.
+- **Major (`X.Y.Z` → `(X+1).0.0`)**: Breaking changes to the core API (e.g., `EnclaveManager` trait modifications).
+- **Minor (`X.Y.Z` → `X.(Y+1).0`)**: New features or significant additions (e.g., new Sovereign Rails).
+- **Patch (`X.Y.Z` → `X.Y.(Z+1)`)**: Bug fixes, performance improvements, and documentation updates.
 
 **Note on 0.x.y versions**: During the Beta phase, breaking changes may occur in minor (`0.x.0`) releases.
 
