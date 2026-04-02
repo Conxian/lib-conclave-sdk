@@ -10,7 +10,7 @@ We strictly follow [Semantic Versioning (SemVer)](https://semver.org/).
 - **Minor (`X.Y.Z` → `X.(Y+1).0`)**: Backward-compatible additive features (e.g., new `Rail` implementation).
 - **Patch (`X.Y.Z` → `X.Y.(Z+1)`)**: Backward-compatible bug fixes, performance improvements, and technical debt (e.g., hygiene updates).
 
-**Note on 0.x.y versions**: During the Beta phase (`0.x.y`), breaking changes may occur in minor releases (e.g., `0.2.3` → `0.3.0`), while patch releases remain backward-compatible (e.g., `0.2.3` → `0.2.4`).
+**Note on 0.x.y versions**: During the Beta phase (`0.x.y`), this is an intentional exception to the usual backward-compatible minor rule: breaking changes may occur in minor releases (e.g., `0.2.3` → `0.3.0`), while patch releases remain backward-compatible (e.g., `0.2.3` → `0.2.4`).
 
 ## Release Flow
 

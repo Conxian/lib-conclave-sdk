@@ -30,7 +30,7 @@ We strictly follow [Semantic Versioning 2.0.0](https://semver.org/).
 - **Minor (`X.Y.Z` → `X.(Y+1).0`)**: Backward-compatible new features or significant additions (e.g., new Sovereign Rails).
 - **Patch (`X.Y.Z` → `X.Y.(Z+1)`)**: Backward-compatible bug fixes, performance improvements, and documentation updates.
 
-**Note on 0.x.y versions**: During the Beta phase (`0.x.y`), breaking changes may occur in minor releases (e.g., `0.2.3` → `0.3.0`), while patch releases remain backward-compatible (e.g., `0.2.3` → `0.2.4`).
+**Note on 0.x.y versions**: During the Beta phase (`0.x.y`), this is an intentional exception to the usual backward-compatible minor rule: breaking changes may occur in minor releases (e.g., `0.2.3` → `0.3.0`), while patch releases remain backward-compatible (e.g., `0.2.3` → `0.2.4`).
 
 ### Compatibility Communication
 - **Changelogs**: Every release must include an update to [CHANGELOG.md](CHANGELOG.md) following the [Keep a Changelog](https://keepachangelog.com/) format.
