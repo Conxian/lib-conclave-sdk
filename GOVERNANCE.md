@@ -44,3 +44,13 @@ The SDK exposes two primary integration surfaces:
 2. **WebAssembly (WASM)**: High-level bindings for browser and mobile environments (e.g., React Native via JSI or WebView).
 
 All public APIs are documented in [README.md](README.md) and through inline Rust documentation (`cargo doc`).
+
+## 5. Prioritized Build/Repair List (Mainnet Readiness)
+
+The following items are prioritized for the SDK's progression toward mainnet readiness (v1.0.0):
+
+1. **Security Hardening (CON-210)**: Implementation of dependency integrity checks and review of unsafe defaults.
+2. **Public Readiness Audit (CON-264)**: Final validation of license, security guidance, and contribution workflows.
+3. **Release Hygiene (CON-214)**: Establishment of automated release tagging and structured changelog verification.
+4. **Secret and Artifact Cleanup (CON-215)**: Continuous monitoring for accidental secret exposure or vendored dependency creep.
+5. **Mainnet Readiness Gate (CON-171)**: Final check of canonical repo name and ownership across all Conxian infrastructure.
