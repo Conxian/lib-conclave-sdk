@@ -14,7 +14,7 @@ Provide cross-platform hardware enclave abstractions and utilities for key custo
 
 - **Status**: Beta / Active Development (`0.x`)
 - **0.x policy**: Breaking changes may land in any release.
-- **1.0+ policy**: We follow [Semantic Versioning](https://semver.org). Breaking changes only land in major releases.
+- **1.0+ policy**: After `1.0.0`, we follow [Semantic Versioning](https://semver.org). Breaking changes only land in major releases.
 
 ## Repository
 
