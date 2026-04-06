@@ -7,4 +7,6 @@ pub mod job_card;
 pub mod mmr;
 pub mod musig2;
 pub mod rails;
+pub mod settlement;
+pub mod settlement_service;
 pub mod stacks;
