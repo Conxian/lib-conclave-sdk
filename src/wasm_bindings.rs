@@ -8,6 +8,8 @@ use crate::protocol::job_card::{ConxianJobCard, Iso20022Wrapper};
 use crate::protocol::mmr::MerkleMountainRange;
 use crate::protocol::musig2::MuSig2Orchestrator;
 use crate::protocol::rails::{BisqRail, ChangellyRail, RailProxy, SwapRequest, WormholeRail};
+use crate::protocol::settlement::{SettlementTrigger, TriggerSource};
+use crate::protocol::settlement_service::{ConclaveSettlementService, SettlementService};
 use crate::protocol::stacks::StacksManager;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -372,5 +374,49 @@ impl ConclaveWasmClient {
     ) -> Result<String, JsValue> {
         let card = ConxianJobCard::new(sender, receiver, amount, town, country);
         Iso20022Wrapper::wrap_json_ld(&card).map_err(|e| JsValue::from_str(&e.to_string()))
+    }
+}
+
+#[wasm_bindgen]
+impl ConclaveWasmClient {
+    /// Creates a settlement proposal from an external trigger (ISO 20022, PAPSS, or BRICS)
+    /// This enforces the 144-block timelock and TEE-verified trigger flow.
+    #[wasm_bindgen]
+    pub async fn create_settlement_proposal(
+        &self,
+        source: &str,
+        payload_hex: &str,
+        asset_chain: &str,
+        asset_symbol: &str,
+        amount: u64,
+        recipient: &str,
+        current_height: u64,
+    ) -> Result<JsValue, JsValue> {
+        let payload = hex::decode(payload_hex)
+            .map_err(|e| JsValue::from_str(&format!("Invalid payload hex: {}", e)))?;
+
+        let trigger_source = match source.to_lowercase().as_str() {
+            "iso20022" => TriggerSource::Iso20022,
+            "papss" => TriggerSource::Papss,
+            "brics" => TriggerSource::Brics,
+            _ => return Err(JsValue::from_str("Unsupported settlement trigger source")),
+        };
+
+        let trigger = SettlementTrigger::new(trigger_source, payload);
+        let settlement_svc = ConclaveSettlementService::new(self.asset_registry.clone());
+
+        let proposal = settlement_svc
+            .process_external_trigger(
+                trigger,
+                asset_chain,
+                asset_symbol,
+                amount,
+                recipient.to_string(),
+                current_height,
+            )
+            .await
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+        serde_wasm_bindgen::to_value(&proposal).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 }
