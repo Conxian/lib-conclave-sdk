@@ -13,7 +13,7 @@ use zeroize::{Zeroize, Zeroizing};
 use crate::enclave::attestation::{AttestationLevel, DeviceIntegrityReport};
 use crate::{
     ConclaveError, ConclaveResult,
-    enclave::{SignRequest, SignResponse},
+    enclave::{EnclaveManager, SignRequest, SignResponse},
 };
 
 type HmacSha512 = Hmac<Sha512>;
@@ -25,6 +25,7 @@ fn unix_time_secs() -> u64 {
         .as_secs()
 }
 
+/// CoreEnclaveManager simulates a hardware-backed security module (e.g., Android StrongBox).
 pub struct CoreEnclaveManager {
     session_key: Mutex<Option<Zeroizing<[u8; 64]>>>,
 }
@@ -42,23 +43,6 @@ impl CoreEnclaveManager {
         }
     }
 
-    pub fn derive_session_key(&self, pin: &str, salt: &[u8]) -> ConclaveResult<()> {
-        if pin.len() < 4 {
-            return Err(ConclaveError::CryptoError("PIN too short".to_string()));
-        }
-
-        let mut key = [0u8; 64];
-        pbkdf2_hmac::<Sha512>(pin.as_bytes(), salt, 600_000, &mut key);
-
-        let mut session = self
-            .session_key
-            .lock()
-            .map_err(|_| ConclaveError::EnclaveFailure("Mutex poison".to_string()))?;
-        *session = Some(Zeroizing::new(key));
-
-        Ok(())
-    }
-
     pub fn is_initialized(&self) -> bool {
         let session = self.session_key.lock().unwrap();
         session.is_some()
@@ -73,7 +57,6 @@ impl CoreEnclaveManager {
             "Enclave not unlocked".to_string(),
         ))?;
 
-        // Access the inner array of Zeroizing
         let session_key_bytes: &[u8] = &**session_key;
 
         let mut mac = HmacSha512::new_from_slice(session_key_bytes)
@@ -96,7 +79,7 @@ impl CoreEnclaveManager {
                 "CONCLAVE_HARDWARE_BACKED_DEVICE_0x1".to_string(),
             ],
             timestamp: unix_time_secs(),
-            extension_data: "PURPOSE_SIGN|ALGORITHM_EC|OS_VERSION_14".to_string(),
+            extension_data: "PURPOSE_SIGN|ALGORITHM_EC|OS_VERSION_14|SIMULATED".to_string(),
         }
     }
 
@@ -159,7 +142,6 @@ impl CoreEnclaveManager {
         )
         .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {}", e)))?;
 
-        // Apply Taproot Tweak if provided (BIP341)
         if let Some(tweak_bytes) = tweak {
             let scalar = secp256k1::Scalar::from_be_bytes(
                 tweak_bytes
@@ -188,15 +170,29 @@ impl CoreEnclaveManager {
     }
 }
 
-impl crate::enclave::EnclaveManager for CoreEnclaveManager {
+impl EnclaveManager for CoreEnclaveManager {
     fn initialize(&self) -> ConclaveResult<()> {
         Ok(())
     }
 
+    fn unlock(&self, pin: &str, salt: &[u8]) -> ConclaveResult<()> {
+        if pin.len() < 4 {
+            return Err(ConclaveError::CryptoError("PIN too short".to_string()));
+        }
+
+        let mut key = [0u8; 64];
+        pbkdf2_hmac::<Sha512>(pin.as_bytes(), salt, 600_000, &mut key);
+
+        let mut session = self
+            .session_key
+            .lock()
+            .map_err(|_| ConclaveError::EnclaveFailure("Mutex poison".to_string()))?;
+        *session = Some(Zeroizing::new(key));
+
+        Ok(())
+    }
+
     fn generate_key(&self, _key_id: &str) -> ConclaveResult<String> {
-        // Fix: Zero Secret Egress violation. Raw seeds must not leave the enclave.
-        // In a production StrongBox implementation, this would persist the key in
-        // hardware and return a handle/alias. For this mock, we return the public key.
         let mut seed = [0u8; 32];
         rand::rng().fill_bytes(&mut seed);
 

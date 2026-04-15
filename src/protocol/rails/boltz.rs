@@ -1,7 +1,7 @@
+use crate::protocol::asset::Chain;
+use crate::protocol::rails::{SovereignRail, SwapIntent, SwapRequest, SwapResponse};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::protocol::rails::{SovereignRail, SwapIntent, SwapRequest, SwapResponse};
-use crate::protocol::asset::Chain;
 
 pub struct BoltzRail {
     pub gateway_url: String,
@@ -22,14 +22,15 @@ impl SovereignRail for BoltzRail {
 
     fn validate_request(&self, request: &SwapRequest) -> Result<Option<String>, String> {
         // Boltz atomic swap validation
-        if request.from_asset.chain != Chain::LIGHTNING && request.to_asset.chain != Chain::LIGHTNING {
+        if request.from_asset.chain != Chain::LIGHTNING
+            && request.to_asset.chain != Chain::LIGHTNING
+        {
             return Err("Boltz rail requires Lightning as one of the swap legs".to_string());
         }
 
         Ok(Some(format!(
             "BOLTZ_{}_TO_{}",
-            request.from_asset.chain,
-            request.to_asset.chain
+            request.from_asset.chain, request.to_asset.chain
         )))
     }
 
@@ -41,7 +42,8 @@ impl SovereignRail for BoltzRail {
         let url = format!("{}/v1/swap/execute", self.gateway_url);
         let payload = BroadcastSwapRequest { intent, signature };
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&url)
             .json(&payload)
             .send()

@@ -31,6 +31,8 @@ impl ConclaveSettlementService {
 
 #[async_trait]
 impl SettlementService for ConclaveSettlementService {
+    /// Orchestrates the end-to-end flow of converting an external settlement trigger
+    /// (ISO 20022, PAPSS, etc.) into a digital asset proposal with a mandatory 144-block timelock.
     async fn process_external_trigger(
         &self,
         trigger: SettlementTrigger,
@@ -40,12 +42,12 @@ impl SettlementService for ConclaveSettlementService {
         recipient: String,
         current_height: u64,
     ) -> ConclaveResult<SettlementProposal> {
-        // 1. Verify trigger inside TEE boundary
+        // 1. Verify trigger validity and structural integrity inside TEE boundary
         if !self.manager.verify_trigger(&trigger)? {
             return Err(crate::ConclaveError::InvalidPayload);
         }
 
-        // 2. Map trigger to proposal with 144-block timelock
+        // 2. Map trigger to proposal with 144-block timelock enforcement
         let proposal = self.manager.create_proposal(
             &trigger,
             asset_chain,
@@ -55,8 +57,13 @@ impl SettlementService for ConclaveSettlementService {
             current_height,
         )?;
 
-        // 3. In a real system, we would broadcast the proposal to the consensus layer here.
-        // For the SDK, we return the proposal for client-side use.
+        // 3. Automated Policy Enforcement: Ensure timelock is exactly 144 blocks
+        if proposal.timelock_height != current_height + 144 {
+            return Err(crate::ConclaveError::CryptoError(
+                "Mandatory 144-block timelock violation".to_string(),
+            ));
+        }
+
         Ok(proposal)
     }
 }
@@ -72,8 +79,8 @@ mod tests {
         let registry = Arc::new(AssetRegistry::new());
         let svc = ConclaveSettlementService::new(registry);
 
-        let payload = b"BRICS_PAYMENT_v1".to_vec();
-        let trigger = SettlementTrigger::new(TriggerSource::Brics, payload);
+        let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
+        let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
 
         let proposal = svc
             .process_external_trigger(

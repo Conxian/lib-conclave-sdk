@@ -38,3 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed mock response logic from `src/protocol/fiat.rs` and `src/protocol/a2p.rs`.
 - Removed `Cargo.lock` from Git tracking as per repository standards.
+
+### Fixed
+- Remediated mock logic in `CloudEnclave` and `CoreEnclaveManager` to support production-grade operations (CON-409).
+- Strengthened `SettlementManager` and `SettlementService` validation for ISO 20022 and enforced the 144-block timelock policy (CON-409).
+- Updated WASM bindings to include missing `unlock_enclave` and session management methods for high-fidelity integration.

@@ -79,9 +79,10 @@ impl FiatRouterService {
             )));
         }
 
-        let session_resp = response.json::<FiatSessionResponse>().await.map_err(|e| {
-            ConclaveError::CryptoError(format!("Invalid gateway response: {}", e))
-        })?;
+        let session_resp = response
+            .json::<FiatSessionResponse>()
+            .await
+            .map_err(|e| ConclaveError::CryptoError(format!("Invalid gateway response: {}", e)))?;
 
         Ok(session_resp)
     }

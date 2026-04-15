@@ -7,8 +7,8 @@ use secp256k1::{Message, PublicKey, Secp256k1, ecdsa::Signature};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::sync::RwLock;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn unix_time_secs() -> u64 {
     SystemTime::now()
@@ -206,17 +206,13 @@ mod tests {
 
     #[test]
     fn test_attribution_verification() {
-        let enclave = CloudEnclave {
-            kms_endpoint: "test".to_string(),
-        };
+        let enclave = CloudEnclave::new("test".to_string());
         let registry = BusinessRegistry::new();
 
-        // Get the mock public key from the cloud enclave
         let public_key = enclave
             .get_public_key("m/44'/5757'/0'/0/business/partner_01")
             .unwrap();
 
-        // Register a business
         let profile = BusinessProfile {
             id: "partner_01".to_string(),
             name: "Partner 1".to_string(),
@@ -230,7 +226,6 @@ mod tests {
             .generate_attribution("partner_01", "user_123", HashMap::new())
             .unwrap();
 
-        // Verify the signature using the profile's public key
         let res = attribution.verify(&profile.public_key);
         assert!(res.is_ok(), "Verification failed: {:?}", res.err());
     }
