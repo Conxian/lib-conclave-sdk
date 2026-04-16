@@ -40,13 +40,13 @@ impl CloudEnclave {
     /// Sets a local development key for deterministic testing.
     /// WARNING: For development use only.
     pub fn with_dev_key(mut self, key_bytes: [u8; 32]) -> ConclaveResult<Self> {
-        let key_bytes = Zeroizing::new(key_bytes);
+        let dev_key_bytes = Zeroizing::new(key_bytes);
 
-        let mut dev_key = SecretKey::from_byte_array(*key_bytes)
+        let mut dev_key = SecretKey::from_byte_array(*dev_key_bytes)
             .map_err(|e| ConclaveError::CryptoError(format!("Invalid dev key: {e}")))?;
         dev_key.non_secure_erase();
 
-        self.local_dev_key_bytes = Some(key_bytes);
+        self.local_dev_key_bytes = Some(dev_key_bytes);
         Ok(self)
     }
 
