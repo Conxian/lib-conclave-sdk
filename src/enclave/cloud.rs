@@ -40,8 +40,9 @@ impl CloudEnclave {
     /// Sets a local development key for deterministic testing.
     /// WARNING: For development use only.
     pub fn with_dev_key(mut self, mut key_bytes: [u8; 32]) -> ConclaveResult<Self> {
-        SecretKey::from_slice(&key_bytes)
+        let mut dev_key = SecretKey::from_byte_array(key_bytes)
             .map_err(|e| ConclaveError::CryptoError(format!("Invalid dev key: {e}")))?;
+        dev_key.non_secure_erase();
 
         self.local_dev_key_bytes = Some(Zeroizing::new(key_bytes));
         key_bytes.zeroize();
@@ -54,8 +55,16 @@ impl CloudEnclave {
 
         loop {
             rng.fill_bytes(&mut *key_bytes);
-            if SecretKey::from_slice(&key_bytes[..]).is_ok() {
-                return key_bytes;
+            let mut candidate_bytes = *key_bytes;
+            match SecretKey::from_byte_array(candidate_bytes) {
+                Ok(mut key) => {
+                    key.non_secure_erase();
+                    candidate_bytes.zeroize();
+                    return key_bytes;
+                }
+                Err(_) => {
+                    candidate_bytes.zeroize();
+                }
             }
         }
     }
@@ -66,8 +75,11 @@ impl CloudEnclave {
             None => &*self.simulated_kms_key_bytes,
         };
 
-        SecretKey::from_slice(key_bytes)
-            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {e}")))
+        let mut candidate_bytes = *key_bytes;
+        let secret_key = SecretKey::from_byte_array(candidate_bytes)
+            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {e}")))?;
+        candidate_bytes.zeroize();
+        Ok(secret_key)
     }
 
     fn generate_attestation_report(&self, challenge: &[u8]) -> DeviceIntegrityReport {
