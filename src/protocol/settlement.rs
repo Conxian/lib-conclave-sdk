@@ -139,6 +139,8 @@ impl SettlementManager {
             prefix_overrides: Vec<(Vec<u8>, bool)>,
         }
 
+        const ISO_20022_URN_PREFIX: &str = "urn:iso:std:iso:20022";
+
         fn build_namespace_scope(
             e: &quick_xml::events::BytesStart<'_>,
             inherited_default_is_iso: bool,
@@ -154,7 +156,7 @@ impl SettlementManager {
                 let key = attr.key.as_ref();
                 if key == b"xmlns" {
                     let value = std::str::from_utf8(attr.value.as_ref()).map_err(|_| ())?;
-                    scope.default_is_iso = value.starts_with("urn:iso:std:iso:20022");
+                    scope.default_is_iso = value.starts_with(ISO_20022_URN_PREFIX);
                     continue;
                 }
 
@@ -162,7 +164,7 @@ impl SettlementManager {
                     let value = std::str::from_utf8(attr.value.as_ref()).map_err(|_| ())?;
                     scope
                         .prefix_overrides
-                        .push((suffix.to_vec(), value.starts_with("urn:iso:std:iso:20022")));
+                        .push((suffix.to_vec(), value.starts_with(ISO_20022_URN_PREFIX)));
                 }
             }
 
