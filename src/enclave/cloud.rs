@@ -63,10 +63,10 @@ impl CloudEnclave {
             None => &self.ephemeral_key_bytes[..],
         };
 
-        let mut key_bytes = [0u8; 32];
-        key_bytes.copy_from_slice(source_bytes);
+        let mut key_bytes = Zeroizing::new([0u8; 32]);
+        key_bytes[..].copy_from_slice(source_bytes);
 
-        SecretKey::from_byte_array(key_bytes)
+        SecretKey::from_byte_array(*key_bytes)
             .map_err(|e| ConclaveError::CryptoError(format!("Invalid active key: {}", e)))
     }
 
