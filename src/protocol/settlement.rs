@@ -141,27 +141,34 @@ impl SettlementManager {
 
         const ISO_20022_URN_PREFIX: &str = "urn:iso:std:iso:20022";
 
+        enum NamespaceScopeError {
+            InvalidAttribute,
+            InvalidUtf8,
+        }
+
         fn build_namespace_scope(
             e: &quick_xml::events::BytesStart<'_>,
             inherited_default_is_iso: bool,
-        ) -> Result<NamespaceScope, ()> {
+        ) -> Result<NamespaceScope, NamespaceScopeError> {
             let mut scope = NamespaceScope {
                 default_is_iso: inherited_default_is_iso,
                 prefix_overrides: Vec::new(),
             };
 
             for attr in e.attributes() {
-                let attr = attr.map_err(|_| ())?;
+                let attr = attr.map_err(|_| NamespaceScopeError::InvalidAttribute)?;
 
                 let key = attr.key.as_ref();
                 if key == b"xmlns" {
-                    let value = std::str::from_utf8(attr.value.as_ref()).map_err(|_| ())?;
+                    let value = std::str::from_utf8(attr.value.as_ref())
+                        .map_err(|_| NamespaceScopeError::InvalidUtf8)?;
                     scope.default_is_iso = value.starts_with(ISO_20022_URN_PREFIX);
                     continue;
                 }
 
                 if let Some(suffix) = key.strip_prefix(b"xmlns:") {
-                    let value = std::str::from_utf8(attr.value.as_ref()).map_err(|_| ())?;
+                    let value = std::str::from_utf8(attr.value.as_ref())
+                        .map_err(|_| NamespaceScopeError::InvalidUtf8)?;
                     scope
                         .prefix_overrides
                         .push((suffix.to_vec(), value.starts_with(ISO_20022_URN_PREFIX)));
