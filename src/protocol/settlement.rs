@@ -141,41 +141,34 @@ impl SettlementManager {
 
         const ISO_20022_URN_PREFIX: &str = "urn:iso:std:iso:20022";
 
-        enum NamespaceScopeError {
-            InvalidAttribute,
-            InvalidUtf8,
-        }
-
         fn build_namespace_scope(
             e: &quick_xml::events::BytesStart<'_>,
             inherited_default_is_iso: bool,
-        ) -> Result<NamespaceScope, NamespaceScopeError> {
+        ) -> Option<NamespaceScope> {
             let mut scope = NamespaceScope {
                 default_is_iso: inherited_default_is_iso,
                 prefix_overrides: Vec::new(),
             };
 
             for attr in e.attributes() {
-                let attr = attr.map_err(|_| NamespaceScopeError::InvalidAttribute)?;
+                let attr = attr.ok()?;
 
                 let key = attr.key.as_ref();
                 if key == b"xmlns" {
-                    let value = std::str::from_utf8(attr.value.as_ref())
-                        .map_err(|_| NamespaceScopeError::InvalidUtf8)?;
+                    let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
                     scope.default_is_iso = value.starts_with(ISO_20022_URN_PREFIX);
                     continue;
                 }
 
                 if let Some(suffix) = key.strip_prefix(b"xmlns:") {
-                    let value = std::str::from_utf8(attr.value.as_ref())
-                        .map_err(|_| NamespaceScopeError::InvalidUtf8)?;
+                    let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
                     scope
                         .prefix_overrides
                         .push((suffix.to_vec(), value.starts_with(ISO_20022_URN_PREFIX)));
                 }
             }
 
-            Ok(scope)
+            Some(scope)
         }
 
         fn lookup_prefix_is_iso(
@@ -247,7 +240,7 @@ impl SettlementManager {
                             .position(|b| *b == b':')
                             .map(|idx| &qname_bytes[..idx]);
 
-                        let Ok(scope) = build_namespace_scope(&e, false) else {
+                        let Some(scope) = build_namespace_scope(&e, false) else {
                             return false;
                         };
 
@@ -276,7 +269,7 @@ impl SettlementManager {
                             None => return false,
                         };
 
-                        let Ok(scope) = build_namespace_scope(&e, parent_default_is_iso) else {
+                        let Some(scope) = build_namespace_scope(&e, parent_default_is_iso) else {
                             return false;
                         };
                         scope
@@ -329,7 +322,7 @@ impl SettlementManager {
                     };
 
                     let qname_bytes = qname.as_ref();
-                    let Ok(scope) = build_namespace_scope(&e, parent_default_is_iso) else {
+                    let Some(scope) = build_namespace_scope(&e, parent_default_is_iso) else {
                         return false;
                     };
 
