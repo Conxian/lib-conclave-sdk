@@ -62,20 +62,21 @@ The SDK is organized into three main layers:
 ```typescript
 import { ConclaveWasmClient } from 'lib-conclave-sdk';
 
-const client = new ConclaveWasmClient();
-client.set_session_key("my_pin", "salt_hex_value");
+// Initialize client with Gateway URL and optional KMS endpoint
+const client = new ConclaveWasmClient("https://api.conxian.io", "https://vault.conxian.io");
 
-// Register a partner
+// Unlock the enclave with user PIN and salt
+await client.unlock_enclave("my_secure_pin", "salt_hex_value");
+
+// Register a partner locally
 client.register_business("partner_01", "Partner Name", "0x...");
 
 // Execute a swap with full Sovereign Handshake
+// Intent objects are prepared and signed within the SDK
 const response = await client.execute_swap(
-    "Changelly",
-    "BTC", "BTC",
-    "ETH", "ETH",
-    100000,
-    "0xRecipient...",
-    "partner_01"
+    intent,
+    signature,
+    attestation
 );
 ```
 

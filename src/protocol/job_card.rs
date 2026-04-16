@@ -47,6 +47,10 @@ impl ConxianJobCard {
                 "ISO-404: Missing mandatory fields (town_name or country_code)".to_string(),
             ));
         }
+        // Additional validation for sBTC amount
+        if self.work_intent.amount_sbtc <= 0.0 {
+            return Err(ConclaveError::IsoError("Amount must be positive".to_string()));
+        }
         Ok(())
     }
 }
@@ -60,8 +64,6 @@ impl Iso20022Wrapper {
         let town = card.work_intent.town_name.as_deref().unwrap_or("Unknown");
         let country = card.work_intent.country_code.as_deref().unwrap_or("ZZ");
 
-        // For pacs.008.001.08 XML generation
-        // This is a simplified representation for the bounty requirement
         let xml = format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
 <Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">

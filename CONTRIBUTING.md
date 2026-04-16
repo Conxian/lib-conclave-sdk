@@ -41,4 +41,5 @@ We use a community-driven bounty model for many features and bug fixes.
 - **No Panics**: Avoid `unwrap()`, `expect()`, or `panic!()` in non-test code. Return a `ConclaveError` instead.
 - **Constant Time**: Use the `subtle` crate for sensitive comparisons.
 - **Zeroization**: Ensure sensitive material is zeroized after use using the `zeroize` crate.
-- **Async Traits**: Prefer plain traits and synchronous methods where possible. Use `#[async_trait]` only when you need async methods in trait interfaces on stable Rust and accept the extra overhead it can introduce.
+- **Session Management**: All sensitive operations should require an unlocked enclave. Use the `unlock` method on `EnclaveManager` to derive session-based keys.
+- **Async Traits**: Use `#[async_trait]` for interoperability across different enclave backends.
