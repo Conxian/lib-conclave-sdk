@@ -26,6 +26,12 @@ pub trait EnclaveManager: Send + Sync {
     /// Initialize the enclave, ensuring the hardware backend is available.
     fn initialize(&self) -> ConclaveResult<()>;
 
+    /// Unlocks the enclave using a secret (e.g., PIN or passphrase).
+    /// Default implementation is a no-op for enclaves that don't require external unlocking.
+    fn unlock(&self, _secret: &str, _salt: &[u8]) -> ConclaveResult<()> {
+        Ok(())
+    }
+
     /// Generate a new keypair within the secure hardware.
     fn generate_key(&self, key_id: &str) -> ConclaveResult<String>;
 

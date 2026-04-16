@@ -79,9 +79,10 @@ impl A2pRouterService {
             )));
         }
 
-        let a2p_resp = response.json::<A2pResponse>().await.map_err(|e| {
-            ConclaveError::CryptoError(format!("Invalid gateway response: {}", e))
-        })?;
+        let a2p_resp = response
+            .json::<A2pResponse>()
+            .await
+            .map_err(|e| ConclaveError::CryptoError(format!("Invalid gateway response: {}", e)))?;
 
         Ok(a2p_resp)
     }
@@ -115,9 +116,10 @@ impl A2pRouterService {
             return Ok(false);
         }
 
-        let result: bool = response.json().await.map_err(|e| {
-            ConclaveError::CryptoError(format!("Invalid gateway response: {}", e))
-        })?;
+        let result: bool = response
+            .json()
+            .await
+            .map_err(|e| ConclaveError::CryptoError(format!("Invalid gateway response: {}", e)))?;
 
         Ok(result)
     }

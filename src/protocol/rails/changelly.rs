@@ -1,6 +1,6 @@
+use crate::protocol::rails::{SovereignRail, SwapIntent, SwapRequest, SwapResponse};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::protocol::rails::{SovereignRail, SwapIntent, SwapResponse, SwapRequest};
 
 pub struct ChangellyRail {
     pub gateway_url: String,
@@ -35,7 +35,8 @@ impl SovereignRail for ChangellyRail {
         let url = format!("{}/v1/swap/execute", self.gateway_url);
         let payload = BroadcastSwapRequest { intent, signature };
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&url)
             .json(&payload)
             .send()

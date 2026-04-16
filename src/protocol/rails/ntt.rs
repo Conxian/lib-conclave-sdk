@@ -1,6 +1,6 @@
+use super::{SovereignRail, SwapIntent, SwapRequest, SwapResponse};
 use async_trait::async_trait;
 use serde_json::json;
-use super::{SovereignRail, SwapIntent, SwapResponse, SwapRequest};
 
 pub struct NTTRail {
     pub gateway_url: String,
@@ -33,7 +33,8 @@ impl SovereignRail for NTTRail {
             "framework": "wormhole-ntt"
         });
 
-        let response = self.http_client
+        let response = self
+            .http_client
             .post(&url)
             .json(&payload)
             .send()
@@ -68,8 +69,14 @@ mod tests {
         assert_eq!(rail.name(), "ntt");
 
         let req = SwapRequest {
-            from_asset: AssetIdentifier { chain: Chain::ETHEREUM, symbol: "ETH".to_string() },
-            to_asset: AssetIdentifier { chain: Chain::ARBITRUM, symbol: "ETH".to_string() },
+            from_asset: AssetIdentifier {
+                chain: Chain::ETHEREUM,
+                symbol: "ETH".to_string(),
+            },
+            to_asset: AssetIdentifier {
+                chain: Chain::ARBITRUM,
+                symbol: "ETH".to_string(),
+            },
             amount: 100,
             recipient_address: "0x...".to_string(),
             attribution: None,

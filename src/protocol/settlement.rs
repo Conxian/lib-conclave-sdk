@@ -1,4 +1,5 @@
 use crate::protocol::asset::{AssetIdentifier, Chain};
+use crate::{ConclaveError, ConclaveResult};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -111,7 +112,6 @@ impl SettlementProposal {
     }
 }
 
-use crate::ConclaveResult;
 use crate::protocol::asset::AssetRegistry;
 use std::sync::Arc;
 
@@ -125,16 +125,36 @@ impl SettlementManager {
     }
 
     /// Verifies an external settlement trigger inside the TEE boundary.
-    /// In a real implementation, this would involve complex parsing of ISO 20022, PAPSS, or BRICS messages.
+    /// Performs structured validation based on the source (e.g., ISO 20022).
     pub fn verify_trigger(&self, trigger: &SettlementTrigger) -> ConclaveResult<bool> {
-        // Validation logic for TradFi payloads
         if trigger.raw_payload_bytes.is_empty() {
             return Ok(false);
         }
 
-        // Ensure the payload doesn't exceed safety bounds
+        // Safety bound for TEE memory constraints
         if trigger.raw_payload_bytes.len() > 1024 * 1024 {
             return Ok(false);
+        }
+
+        match trigger.source {
+            TriggerSource::Iso20022 => {
+                let payload_str = String::from_utf8_lossy(&trigger.raw_payload_bytes);
+                // Basic structural validation for ISO 20022 XML (e.g., pacs.008)
+                if !payload_str.contains("urn:iso:std:iso:20022") {
+                    return Ok(false);
+                }
+                if !payload_str.contains("<FIToFICstmrCdtTrf>")
+                    && !payload_str.contains("<Document")
+                {
+                    return Ok(false);
+                }
+            }
+            TriggerSource::Papss | TriggerSource::Brics => {
+                // Heuristic validation for PAPSS/BRICS JSON-LD or proprietary formats
+                if trigger.raw_payload_bytes.len() < 32 {
+                    return Ok(false);
+                }
+            }
         }
 
         Ok(true)
@@ -160,17 +180,20 @@ impl SettlementManager {
             "ARBITRUM" => Chain::ARBITRUM,
             "BASE" => Chain::BASE,
             "LIGHTNING" => Chain::LIGHTNING,
-            _ => Chain::BITCOIN, // Default
+            _ => return Err(ConclaveError::InvalidPayload),
         };
 
-        let id = AssetIdentifier { chain: chain_enum, symbol: asset_symbol.to_string() };
+        let id = AssetIdentifier {
+            chain: chain_enum,
+            symbol: asset_symbol.to_string(),
+        };
         let asset = self
             .asset_registry
             .get_asset(&id)
-            .ok_or(crate::ConclaveError::InvalidPayload)?;
+            .ok_or(ConclaveError::InvalidPayload)?;
 
         if !asset.active {
-            return Err(crate::ConclaveError::InvalidPayload);
+            return Err(ConclaveError::InvalidPayload);
         }
 
         Ok(SettlementProposal::new(
@@ -194,7 +217,7 @@ mod tests {
         let registry = Arc::new(AssetRegistry::new());
         let manager = SettlementManager::new(registry);
 
-        let payload = b"ISO20022_PAYMENT_DATA".to_vec();
+        let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
         let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
 
         assert!(manager.verify_trigger(&trigger).unwrap());
