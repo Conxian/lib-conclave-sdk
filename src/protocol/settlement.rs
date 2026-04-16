@@ -126,8 +126,7 @@ impl SettlementManager {
     }
 
     fn validate_iso20022_trigger_payload(payload: &[u8]) -> bool {
-        const ISO_URN_BASE: &str = "urn:iso:std:iso:20022";
-        const ISO_URN_PREFIX: &str = "urn:iso:std:iso:20022:";
+        const ISO_MESSAGE_URN_PREFIX: &str = "urn:iso:std:iso:20022:tech:xsd:";
 
         fn local_name(name: &[u8]) -> &[u8] {
             match name.iter().rposition(|b| *b == b':') {
@@ -137,7 +136,7 @@ impl SettlementManager {
         }
 
         fn is_iso_urn(value: &str) -> bool {
-            value == ISO_URN_BASE || value.starts_with(ISO_URN_PREFIX)
+            value.starts_with(ISO_MESSAGE_URN_PREFIX)
         }
 
         #[derive(Clone)]
