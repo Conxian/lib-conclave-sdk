@@ -197,6 +197,37 @@ mod tests {
     }
 
     #[test]
+    fn test_amount_validation_rejects_invalid_formats() {
+        let invalid_amounts = [
+            "",
+            "+1",
+            "-1",
+            "1.",
+            ".1",
+            "1.2.3",
+            "abc",
+            "1.a",
+            "1.123456789",
+        ];
+
+        for amount in invalid_amounts {
+            let card = ConxianJobCard::new(
+                "SP1...",
+                "SP2...",
+                amount.to_string(),
+                Some("Johannesburg".to_string()),
+                Some("ZA".to_string()),
+            );
+            let res = card.validate();
+            assert!(res.is_err(), "expected error for amount={amount:?}");
+            match res {
+                Err(ConclaveError::IsoError(e)) => assert!(e.contains("ISO-422")),
+                _ => panic!("Expected ISO-422 error"),
+            }
+        }
+    }
+
+    #[test]
     fn test_benchmark_pacs008_latency() {
         let card = ConxianJobCard::new(
             "SP1...",
