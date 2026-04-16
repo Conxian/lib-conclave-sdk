@@ -56,12 +56,8 @@ impl CloudEnclave {
 
         loop {
             rng.fill_bytes(&mut *key_bytes);
-            if SecretKey::from_byte_array(*key_bytes)
-                .map(|mut key| {
-                    key.non_secure_erase();
-                })
-                .is_ok()
-            {
+            if let Ok(mut key) = SecretKey::from_byte_array(*key_bytes) {
+                key.non_secure_erase();
                 return key_bytes;
             }
         }
@@ -73,11 +69,8 @@ impl CloudEnclave {
             None => &*self.simulated_kms_key_bytes,
         };
 
-        let candidate_bytes = Zeroizing::new(*key_bytes);
-
-        let secret_key = SecretKey::from_byte_array(*candidate_bytes)
-            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {e}")))?;
-        Ok(secret_key)
+        SecretKey::from_byte_array(*key_bytes)
+            .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {e}")))
     }
 
     fn generate_attestation_report(&self, challenge: &[u8]) -> DeviceIntegrityReport {
