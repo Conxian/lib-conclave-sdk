@@ -8,6 +8,8 @@ use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::{Zeroize, Zeroizing};
 
+const SIMULATED_KMS_KEYGEN_MAX_ATTEMPTS: usize = 1024;
+
 fn unix_time_secs() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -51,7 +53,7 @@ impl CloudEnclave {
         let mut rng = rand::rng();
         let mut key_bytes = Zeroizing::new([0u8; 32]);
 
-        for _ in 0..1024 {
+        for _ in 0..SIMULATED_KMS_KEYGEN_MAX_ATTEMPTS {
             rng.fill_bytes(&mut *key_bytes);
             if Self::is_valid_secret_key_bytes(&key_bytes) {
                 return Ok(key_bytes);
@@ -59,7 +61,10 @@ impl CloudEnclave {
         }
 
         Err(ConclaveError::CryptoError(
-            "Failed to generate simulated KMS secret key".to_string(),
+            format!(
+                "Failed to generate simulated KMS secret key after {} attempts",
+                SIMULATED_KMS_KEYGEN_MAX_ATTEMPTS
+            ),
         ))
     }
 
