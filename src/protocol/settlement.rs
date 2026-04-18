@@ -173,40 +173,64 @@ impl SettlementManager {
             is_iso_message_id(message_id)
         }
 
-        #[derive(Clone)]
-        struct NamespaceScope {
-            default_is_iso: bool,
-            prefix_overrides: Vec<(Vec<u8>, bool)>,
+        fn is_pacs008_urn(value: &str) -> bool {
+            let Some(message_id) = value.strip_prefix(ISO_MESSAGE_URN_PREFIX) else {
+                return false;
+            };
+
+            is_iso_message_id(message_id) && message_id.starts_with("pacs.008.")
         }
 
-        fn lookup_prefix_is_iso(
+        #[derive(Clone, Copy)]
+        struct NamespaceIdentity {
+            is_iso: bool,
+            is_pacs008: bool,
+        }
+
+        fn namespace_identity(value: &str) -> NamespaceIdentity {
+            NamespaceIdentity {
+                is_iso: is_iso_urn(value),
+                is_pacs008: is_pacs008_urn(value),
+            }
+        }
+
+        #[derive(Clone)]
+        struct NamespaceScope {
+            default_identity: NamespaceIdentity,
+            prefix_overrides: Vec<(Vec<u8>, NamespaceIdentity)>,
+        }
+
+        fn lookup_prefix_identity(
             prefix: &[u8],
             current: &NamespaceScope,
             stack: &[NamespaceScope],
-        ) -> bool {
-            for (p, is_iso) in current.prefix_overrides.iter().rev() {
+        ) -> NamespaceIdentity {
+            for (p, identity) in current.prefix_overrides.iter().rev() {
                 if p.as_slice() == prefix {
-                    return *is_iso;
+                    return *identity;
                 }
             }
 
             for scope in stack.iter().rev() {
-                for (p, is_iso) in scope.prefix_overrides.iter().rev() {
+                for (p, identity) in scope.prefix_overrides.iter().rev() {
                     if p.as_slice() == prefix {
-                        return *is_iso;
+                        return *identity;
                     }
                 }
             }
 
-            false
+            NamespaceIdentity {
+                is_iso: false,
+                is_pacs008: false,
+            }
         }
 
         fn build_namespace_scope<'a>(
             attrs: quick_xml::events::attributes::Attributes<'a>,
-            parent_default_is_iso: bool,
+            parent_default_identity: NamespaceIdentity,
         ) -> Option<NamespaceScope> {
             let mut scope = NamespaceScope {
-                default_is_iso: parent_default_is_iso,
+                default_identity: parent_default_identity,
                 prefix_overrides: Vec::new(),
             };
 
@@ -216,7 +240,7 @@ impl SettlementManager {
 
                 if key == b"xmlns" {
                     let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
-                    scope.default_is_iso = is_iso_urn(value);
+                    scope.default_identity = namespace_identity(value);
                     continue;
                 }
 
@@ -224,7 +248,7 @@ impl SettlementManager {
                     let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
                     scope
                         .prefix_overrides
-                        .push((suffix.to_vec(), is_iso_urn(value)));
+                        .push((suffix.to_vec(), namespace_identity(value)));
                 }
             }
 
@@ -278,18 +302,24 @@ impl SettlementManager {
                             .position(|b| *b == b':')
                             .map(|idx| &qname_bytes[..idx]);
 
-                        let Some(scope) = build_namespace_scope(e.attributes(), false) else {
+                        let Some(scope) = build_namespace_scope(
+                            e.attributes(),
+                            NamespaceIdentity {
+                                is_iso: false,
+                                is_pacs008: false,
+                            },
+                        ) else {
                             return false;
                         };
 
                         document_namespace_ok = match document_prefix_bytes {
-                            None => scope.default_is_iso,
+                            None => scope.default_identity.is_iso,
                             Some(prefix) => scope
                                 .prefix_overrides
                                 .iter()
                                 .rev()
                                 .find(|(p, _)| p.as_slice() == prefix)
-                                .map(|(_, is_iso)| *is_iso)
+                                .map(|(_, identity)| identity.is_iso)
                                 .unwrap_or(false),
                         };
 
@@ -302,13 +332,13 @@ impl SettlementManager {
                             return false;
                         }
 
-                        let parent_default_is_iso = match namespace_stack.last() {
-                            Some(scope) => scope.default_is_iso,
+                        let parent_default_identity = match namespace_stack.last() {
+                            Some(scope) => scope.default_identity,
                             None => return false,
                         };
 
                         let Some(scope) =
-                            build_namespace_scope(e.attributes(), parent_default_is_iso)
+                            build_namespace_scope(e.attributes(), parent_default_identity)
                         else {
                             return false;
                         };
@@ -322,14 +352,14 @@ impl SettlementManager {
                             .position(|b| *b == b':')
                             .map(|idx| &qname_bytes[..idx]);
 
-                        let element_is_iso = match element_prefix {
-                            None => element_scope.default_is_iso,
+                        let element_namespace = match element_prefix {
+                            None => element_scope.default_identity,
                             Some(prefix) => {
-                                lookup_prefix_is_iso(prefix, &element_scope, &namespace_stack)
+                                lookup_prefix_identity(prefix, &element_scope, &namespace_stack)
                             }
                         };
 
-                        if element_is_iso {
+                        if element_namespace.is_pacs008 {
                             saw_credit_transfer = true;
                         }
                     }
@@ -357,13 +387,14 @@ impl SettlementManager {
                         return false;
                     }
 
-                    let parent_default_is_iso = match namespace_stack.last() {
-                        Some(scope) => scope.default_is_iso,
+                    let parent_default_identity = match namespace_stack.last() {
+                        Some(scope) => scope.default_identity,
                         None => return false,
                     };
 
                     let qname_bytes = qname.as_ref();
-                    let Some(scope) = build_namespace_scope(e.attributes(), parent_default_is_iso)
+                    let Some(scope) =
+                        build_namespace_scope(e.attributes(), parent_default_identity)
                     else {
                         return false;
                     };
@@ -374,12 +405,14 @@ impl SettlementManager {
                             .position(|b| *b == b':')
                             .map(|idx| &qname_bytes[..idx]);
 
-                        let element_is_iso = match element_prefix {
-                            None => scope.default_is_iso,
-                            Some(prefix) => lookup_prefix_is_iso(prefix, &scope, &namespace_stack),
+                        let element_namespace = match element_prefix {
+                            None => scope.default_identity,
+                            Some(prefix) => {
+                                lookup_prefix_identity(prefix, &scope, &namespace_stack)
+                            }
                         };
 
-                        if element_is_iso {
+                        if element_namespace.is_pacs008 {
                             saw_credit_transfer = true;
                         }
                     }
@@ -562,6 +595,17 @@ mod tests {
         let manager = SettlementManager::new(registry);
 
         let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08evil\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
+        let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
+
+        assert!(!manager.verify_trigger(&trigger).unwrap());
+    }
+
+    #[test]
+    fn test_rejects_fi_to_fi_credit_transfer_in_non_pacs008_namespace() {
+        let registry = Arc::new(AssetRegistry::new());
+        let manager = SettlementManager::new(registry);
+
+        let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.052.001.08\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
         let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
 
         assert!(!manager.verify_trigger(&trigger).unwrap());
