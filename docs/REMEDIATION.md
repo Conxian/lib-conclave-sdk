@@ -32,3 +32,10 @@ The SDK has been successfully refactored and aligned with the `sdk-core-architec
 - **Status**: COMPLETED.
 - **Implementation**: Fixed a critical security vulnerability in `src/enclave/android_strongbox.rs` where `generate_key` was returning raw secret seeds. The implementation now derives the public key, zeroizes the seed, and returns only the public hex.
 - **Verification**: Verified with `cargo test`.
+
+## 7. Oracle Fail-Closed Logic (CON-496)
+- **Status**: COMPLETED.
+- **Implementation**:
+    - `contracts/oracle/oracle-aggregator.clar` implemented with quorum-based aggregation, stale price rejection, and emergency override.
+    - `contracts/oracle/dimensional-oracle.clar` implemented with fail-closed confidence and staleness checks.
+- **Verification**: Verified via manual inspection of Clarity logic.
