@@ -70,3 +70,10 @@ The SDK has been successfully refactored and aligned with the `sdk-core-architec
 ## 11. Lending Solvency Checks (CON-497)
 - **Status**: COMPLETED.
 - **Implementation**: `contracts/lending/lending-manager.clar` integrates with `risk-manager.clar` to enforce health-factor checks on borrow and withdraw flows.
+
+## 12. Fail-Closed Integration (Final Phase)
+- **Status**: COMPLETED.
+- **Implementation**:
+    - Fully enabled cross-contract calls between `lending-manager.clar`, `emergency-control.clar`, and `risk-manager.clar`.
+    - `oracle-aggregator.clar` now includes explicit quorum counting (`AssetQuorumCount`) and resets on update to ensure each epoch meets the required validator threshold.
+- **Verification**: Verified via manual inspection and local unit tests for the Rust SDK layer.

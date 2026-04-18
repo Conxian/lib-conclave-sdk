@@ -21,10 +21,10 @@
         (new-collateral (+ (get collateral balance) collateral-value))
     )
         ;; 1. Check Circuit Breaker (CON-500)
-        ;; (asserts! (not (contract-call? .emergency-control is-system-paused)) ERR-SYSTEM-PAUSED)
+        (asserts! (not (contract-call? .emergency-control is-system-paused)) ERR-SYSTEM-PAUSED)
 
         ;; 2. Enforce Solvency (CON-497/499)
-        ;; (try! (contract-call? .risk-manager check-health new-collateral new-debt))
+        (try! (contract-call? .risk-manager check-health new-collateral new-debt))
 
         (map-set UserBalances { user: tx-sender } { collateral: new-collateral, debt: new-debt })
         (ok true)
@@ -37,7 +37,7 @@
         (new-collateral (- (get collateral balance) amount-collateral))
     )
         ;; 1. Enforce Solvency after withdrawal
-        ;; (try! (contract-call? .risk-manager check-health new-collateral (get debt balance)))
+        (try! (contract-call? .risk-manager check-health new-collateral (get debt balance)))
 
         (map-set UserBalances { user: tx-sender } { collateral: new-collateral, debt: (get debt balance) })
         (ok true)

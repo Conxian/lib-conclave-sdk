@@ -75,3 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `contracts/core/emergency-control.clar` for centralized circuit breaking.
 - `contracts/lending/lending-manager.clar` for solvent lending operations.
+
+### Added
+- Explicit quorum tracking in `oracle-aggregator.clar`.
+- Active circuit breaker and solvency cross-calls in `lending-manager.clar`.

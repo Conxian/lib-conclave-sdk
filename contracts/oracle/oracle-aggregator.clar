@@ -18,6 +18,7 @@
 (define-map PriceFeeds { asset: (string-ascii 16) } { price: uint, last-block: uint, quorum-reached: bool })
 (define-map OracleSubmissions { asset: (string-ascii 16), oracle: principal } { price: uint, timestamp: uint })
 (define-map EmergencyOverrides { asset: (string-ascii 16) } { price: uint, expiry: uint, authorized-by: principal })
+(define-map AssetQuorumCount { asset: (string-ascii 16) } { count: uint })
 
 ;; Administrative
 (define-data-var contract-owner principal tx-sender)
@@ -55,6 +56,7 @@
 (define-public (submit-price (asset (string-ascii 16)) (price uint))
     (let (
         (oracle-info (unwrap! (map-get? AuthorizedOracles tx-sender) ERR-NOT-AUTHORIZED))
+        (current-quorum (default-to { count: u0 } (map-get? AssetQuorumCount { asset: asset })))
     )
         (asserts! (get active oracle-info) ERR-NOT-AUTHORIZED)
         (asserts! (> price u0) ERR-INVALID-PRICE)
@@ -62,14 +64,21 @@
         (map-set OracleSubmissions { asset: asset, oracle: tx-sender }
             { price: price, timestamp: block-height })
 
+        ;; Increment submission count for this block/asset
+        (map-set AssetQuorumCount { asset: asset } { count: (+ (get count current-quorum) u1) })
+
         (print { event: "price-submitted", asset: asset, oracle: tx-sender, price: price })
         (ok true)
     )
 )
 
-(define-public (update-canonical-price (asset (string-ascii 16)) (median-price uint) (reached-quorum bool))
-    (begin
+(define-public (update-canonical-price (asset (string-ascii 16)) (median-price uint))
+    (let (
+        (quorum-data (default-to { count: u0 } (map-get? AssetQuorumCount { asset: asset })))
+        (reached-quorum (>= (get count quorum-data) (var-get required-quorum)))
+    )
         (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
+
         (map-set PriceFeeds { asset: asset }
             {
                 price: median-price,
@@ -77,6 +86,8 @@
                 quorum-reached: reached-quorum
             }
         )
+        ;; Reset quorum count for next update cycle
+        (map-set AssetQuorumCount { asset: asset } { count: u0 })
         (ok true)
     )
 )
