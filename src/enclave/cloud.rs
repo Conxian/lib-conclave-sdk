@@ -5,6 +5,8 @@ use crate::{
 };
 use rand::Rng;
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use std::ops::Deref;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -24,16 +26,15 @@ pub struct CloudEnclave {
     /// Optional local secret key bytes for deterministic development/testing.
     local_dev_key_bytes: Option<Zeroizing<[u8; 32]>>,
     /// Per-instance simulated key used when no local dev key is configured.
-    simulated_kms_key_bytes: Zeroizing<[u8; 32]>,
+    simulated_kms_key_bytes: OnceLock<Zeroizing<[u8; 32]>>,
 }
 
 impl CloudEnclave {
     pub fn new(kms_endpoint: String) -> Self {
-        let simulated_kms_key_bytes = Self::generate_simulated_kms_key_bytes();
         Self {
             kms_endpoint,
             local_dev_key_bytes: None,
-            simulated_kms_key_bytes,
+            simulated_kms_key_bytes: OnceLock::new(),
         }
     }
 
@@ -56,17 +57,32 @@ impl CloudEnclave {
 
         loop {
             rng.fill_bytes(&mut *key_bytes);
-            if let Ok(mut key) = SecretKey::from_byte_array(*key_bytes) {
-                key.non_secure_erase();
+            if Self::is_valid_secret_key_bytes(&key_bytes) {
                 return key_bytes;
             }
         }
     }
 
+    fn is_valid_secret_key_bytes(key_bytes: &[u8; 32]) -> bool {
+        // SAFETY: `secp256k1_ec_seckey_verify` is the libsecp256k1-provided validity check for
+        // 32-byte secret key material. We pass a pointer to exactly 32 bytes.
+        let ok = unsafe {
+            secp256k1::ffi::secp256k1_ec_seckey_verify(
+                secp256k1::ffi::secp256k1_context_no_precomp,
+                key_bytes.as_ptr(),
+            )
+        };
+
+        ok == 1
+    }
+
     fn get_active_key(&self) -> ConclaveResult<SecretKey> {
-        let key_bytes: &[u8; 32] = match self.local_dev_key_bytes.as_ref() {
-            Some(key_bytes) => &**key_bytes,
-            None => &*self.simulated_kms_key_bytes,
+        let key_bytes: &[u8; 32] = match self.local_dev_key_bytes.as_deref() {
+            Some(key_bytes) => key_bytes,
+            None => self
+                .simulated_kms_key_bytes
+                .get_or_init(Self::generate_simulated_kms_key_bytes)
+                .deref(),
         };
 
         SecretKey::from_byte_array(*key_bytes)
@@ -123,7 +139,11 @@ impl EnclaveManager for CloudEnclave {
 
         let secp = Secp256k1::new();
         let secret_key = self.get_active_key()?;
-        let message_bytes: [u8; 32] = request.message_hash.clone().try_into().unwrap();
+        let message_bytes: [u8; 32] = request
+            .message_hash
+            .as_slice()
+            .try_into()
+            .map_err(|_| ConclaveError::InvalidPayload)?;
         let message = Message::from_digest(message_bytes);
 
         let sig = secp.sign_ecdsa(message, &secret_key);

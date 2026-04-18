@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored `RailProxy` to inject the gateway endpoint into all registered Rails.
 - Updated `ConclaveWasmClient` to use the unified gateway URL for all protocol services.
 - Refactored `BusinessRegistry` and `AssetRegistry` to use thread-safe interior mutability (`RwLock`), preventing runtime panics during registration.
+- `CloudEnclave::with_dev_key` now returns `ConclaveResult<Self>` instead of panicking on invalid key bytes.
+- ISO 20022 trigger validation now requires `<Document>` as the XML root element and rejects extra content outside it.
 - Normalized SDK naming and discovery across documentation and external issue tracking (CON-171).
 - Switched test cases from testnet (`ST...`) to mainnet (`SP...`) principal examples.
 - Updated `RELEASING.md` with detailed release flow and security audit requirements.
@@ -43,3 +45,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remediated mock logic in `CloudEnclave` and `CoreEnclaveManager` to support production-grade operations (CON-409).
 - Strengthened `SettlementManager` and `SettlementService` validation for ISO 20022 and enforced the 144-block timelock policy (CON-409).
 - Updated WASM bindings to include missing `unlock_enclave` and session management methods for high-fidelity integration.
+
+## [0.1.1] - 2026-04-18
+
+### Added
+- `contracts/oracle/oracle-aggregator.clar` for fail-closed price aggregation.
+- `contracts/oracle/dimensional-oracle.clar` for multi-dimensional market data with confidence checks.
+
+### Changed
+- Downgraded `sha2` to `0.10.8` to resolve dependency conflict with `hmac`, `pbkdf2`, and `k256`.
+- Updated `REMEDIATION.md` with Oracle implementation details.
+
+### Added
+- `contracts/core/risk-manager.clar` for health-factor and liquidation logic.
+- `contracts/core/admin-facade.clar` for explicit RBAC on privileged paths.
+
+## [0.1.1] - 2026-04-18
+
+### Added
+- `contracts/oracle/oracle-aggregator.clar` for fail-closed price aggregation.
+- `contracts/oracle/dimensional-oracle.clar` for multi-dimensional market data with confidence checks.
+- `contracts/core/risk-manager.clar` for health-factor and liquidation logic.
+- `contracts/core/admin-facade.clar` for explicit RBAC on privileged paths.
+
+### Changed
+- Downgraded `sha2` to `0.10.8` to resolve dependency conflict with `hmac`, `pbkdf2`, and `k256`.
+- Updated `REMEDIATION.md` with Oracle, Risk, and Admin implementation details.
+
+### Added
+- `contracts/core/emergency-control.clar` for centralized circuit breaking.
+- `contracts/lending/lending-manager.clar` for solvent lending operations.
+
+### Added
+- Explicit quorum tracking in `oracle-aggregator.clar`.
+- Active circuit breaker and solvency cross-calls in `lending-manager.clar`.
