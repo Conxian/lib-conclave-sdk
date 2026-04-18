@@ -126,6 +126,8 @@ impl SettlementManager {
     }
 
     fn validate_iso20022_trigger_payload(payload: &[u8]) -> bool {
+        const ISO_MESSAGE_URN_PREFIX: &str = "urn:iso:std:iso:20022:tech:xsd:";
+
         fn local_name(name: &[u8]) -> &[u8] {
             match name.iter().rposition(|b| *b == b':') {
                 Some(idx) => &name[idx + 1..],
@@ -133,10 +135,112 @@ impl SettlementManager {
             }
         }
 
+        fn is_iso_message_id(value: &str) -> bool {
+            let mut parts = value.split('.');
+
+            let Some(business_area) = parts.next() else {
+                return false;
+            };
+            let Some(message_type) = parts.next() else {
+                return false;
+            };
+            let Some(variant) = parts.next() else {
+                return false;
+            };
+            let Some(version) = parts.next() else {
+                return false;
+            };
+
+            if parts.next().is_some() {
+                return false;
+            }
+
+            business_area.len() == 4
+                && business_area.bytes().all(|b| b.is_ascii_alphabetic())
+                && message_type.len() == 3
+                && message_type.bytes().all(|b| b.is_ascii_digit())
+                && variant.len() == 3
+                && variant.bytes().all(|b| b.is_ascii_digit())
+                && version.len() == 2
+                && version.bytes().all(|b| b.is_ascii_digit())
+        }
+
+        fn is_iso_urn(value: &str) -> bool {
+            let Some(message_id) = value.strip_prefix(ISO_MESSAGE_URN_PREFIX) else {
+                return false;
+            };
+
+            is_iso_message_id(message_id)
+        }
+
+        #[derive(Clone)]
+        struct NamespaceScope {
+            default_is_iso: bool,
+            prefix_overrides: Vec<(Vec<u8>, bool)>,
+        }
+
+        fn lookup_prefix_is_iso(
+            prefix: &[u8],
+            current: &NamespaceScope,
+            stack: &[NamespaceScope],
+        ) -> bool {
+            for (p, is_iso) in current.prefix_overrides.iter().rev() {
+                if p.as_slice() == prefix {
+                    return *is_iso;
+                }
+            }
+
+            for scope in stack.iter().rev() {
+                for (p, is_iso) in scope.prefix_overrides.iter().rev() {
+                    if p.as_slice() == prefix {
+                        return *is_iso;
+                    }
+                }
+            }
+
+            false
+        }
+
+        fn build_namespace_scope<'a>(
+            attrs: quick_xml::events::attributes::Attributes<'a>,
+            parent_default_is_iso: bool,
+        ) -> Option<NamespaceScope> {
+            let mut scope = NamespaceScope {
+                default_is_iso: parent_default_is_iso,
+                prefix_overrides: Vec::new(),
+            };
+
+            for attr in attrs {
+                let attr = attr.ok()?;
+                let key = attr.key.as_ref();
+
+                if key == b"xmlns" {
+                    let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
+                    scope.default_is_iso = is_iso_urn(value);
+                    continue;
+                }
+
+                if let Some(suffix) = key.strip_prefix(b"xmlns:") {
+                    let value = std::str::from_utf8(attr.value.as_ref()).ok()?;
+                    scope
+                        .prefix_overrides
+                        .push((suffix.to_vec(), is_iso_urn(value)));
+                }
+            }
+
+            Some(scope)
+        }
+
         let mut reader = Reader::from_reader(payload);
         reader.config_mut().trim_text(true);
 
         let mut buf = Vec::new();
+
+        let mut depth: usize = 0;
+        let mut in_document = false;
+        let mut document_depth: Option<usize> = None;
+        let mut document_closed = false;
+        let mut namespace_stack: Vec<NamespaceScope> = Vec::new();
 
         let mut document_namespace_ok = false;
         let mut saw_document_root = false;
@@ -146,46 +250,191 @@ impl SettlementManager {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Eof) => break,
                 Ok(Event::DocType(_)) => return false,
-                Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                Ok(Event::Start(e)) => {
+                    if document_closed {
+                        return false;
+                    }
+
+                    let qname = e.name();
+                    let name = local_name(qname.as_ref());
+
+                    if saw_document_root && name == b"Document" {
+                        return false;
+                    }
+
+                    let qname_bytes = qname.as_ref();
+
+                    let element_scope = if !saw_document_root {
+                        if depth != 0 || name != b"Document" {
+                            return false;
+                        }
+
+                        saw_document_root = true;
+                        in_document = true;
+                        document_depth = Some(depth);
+
+                        let document_prefix_bytes = qname_bytes
+                            .iter()
+                            .position(|b| *b == b':')
+                            .map(|idx| &qname_bytes[..idx]);
+
+                        let Some(scope) = build_namespace_scope(e.attributes(), false) else {
+                            return false;
+                        };
+
+                        document_namespace_ok = match document_prefix_bytes {
+                            None => scope.default_is_iso,
+                            Some(prefix) => scope
+                                .prefix_overrides
+                                .iter()
+                                .rev()
+                                .find(|(p, _)| p.as_slice() == prefix)
+                                .map(|(_, is_iso)| *is_iso)
+                                .unwrap_or(false),
+                        };
+
+                        if !document_namespace_ok {
+                            return false;
+                        }
+                        scope
+                    } else {
+                        if !in_document {
+                            return false;
+                        }
+
+                        let parent_default_is_iso = match namespace_stack.last() {
+                            Some(scope) => scope.default_is_iso,
+                            None => return false,
+                        };
+
+                        let Some(scope) =
+                            build_namespace_scope(e.attributes(), parent_default_is_iso)
+                        else {
+                            return false;
+                        };
+
+                        scope
+                    };
+
+                    if in_document && name == b"FIToFICstmrCdtTrf" {
+                        let element_prefix = qname_bytes
+                            .iter()
+                            .position(|b| *b == b':')
+                            .map(|idx| &qname_bytes[..idx]);
+
+                        let element_is_iso = match element_prefix {
+                            None => element_scope.default_is_iso,
+                            Some(prefix) => {
+                                lookup_prefix_is_iso(prefix, &element_scope, &namespace_stack)
+                            }
+                        };
+
+                        if element_is_iso {
+                            saw_credit_transfer = true;
+                        }
+                    }
+
+                    namespace_stack.push(element_scope);
+                    depth += 1;
+                }
+                Ok(Event::Empty(e)) => {
+                    if document_closed {
+                        return false;
+                    }
+
                     let qname = e.name();
                     let name = local_name(qname.as_ref());
 
                     if !saw_document_root {
-                        saw_document_root = name == b"Document";
-                        if saw_document_root {
-                            for attr in e.attributes() {
-                                let Ok(attr) = attr else {
-                                    return false;
-                                };
-
-                                let key = attr.key.as_ref();
-                                if !key.starts_with(b"xmlns") {
-                                    continue;
-                                }
-
-                                let Ok(value) = std::str::from_utf8(attr.value.as_ref()) else {
-                                    return false;
-                                };
-                                if value.contains("urn:iso:std:iso:20022") {
-                                    document_namespace_ok = true;
-                                    break;
-                                }
-                            }
-                        }
+                        return false;
                     }
+
+                    if !in_document {
+                        return false;
+                    }
+
+                    if name == b"Document" {
+                        return false;
+                    }
+
+                    let parent_default_is_iso = match namespace_stack.last() {
+                        Some(scope) => scope.default_is_iso,
+                        None => return false,
+                    };
+
+                    let qname_bytes = qname.as_ref();
+                    let Some(scope) = build_namespace_scope(e.attributes(), parent_default_is_iso)
+                    else {
+                        return false;
+                    };
 
                     if name == b"FIToFICstmrCdtTrf" {
-                        saw_credit_transfer = true;
+                        let element_prefix = qname_bytes
+                            .iter()
+                            .position(|b| *b == b':')
+                            .map(|idx| &qname_bytes[..idx]);
+
+                        let element_is_iso = match element_prefix {
+                            None => scope.default_is_iso,
+                            Some(prefix) => lookup_prefix_is_iso(prefix, &scope, &namespace_stack),
+                        };
+
+                        if element_is_iso {
+                            saw_credit_transfer = true;
+                        }
                     }
                 }
-                Ok(_) => {}
+                Ok(Event::End(e)) => {
+                    let qname = e.name();
+                    let name = local_name(qname.as_ref());
+
+                    if depth == 0 {
+                        return false;
+                    }
+
+                    let end_depth = depth - 1;
+
+                    if namespace_stack.pop().is_none() {
+                        return false;
+                    }
+
+                    if name == b"Document" && document_depth == Some(end_depth) {
+                        in_document = false;
+                        document_depth = None;
+                        document_closed = true;
+                    }
+
+                    depth = end_depth;
+                }
+                Ok(event) => match event {
+                    Event::Text(t) => {
+                        let bytes = t.as_ref();
+                        if !bytes.is_empty()
+                            && !bytes.iter().all(|b| b.is_ascii_whitespace())
+                            && (!saw_document_root || document_closed)
+                        {
+                            return false;
+                        }
+                    }
+                    _ => {
+                        if document_closed {
+                            return false;
+                        }
+                    }
+                },
                 Err(_) => return false,
             }
 
             buf.clear();
         }
 
-        saw_document_root && document_namespace_ok && saw_credit_transfer
+        depth == 0
+            && namespace_stack.is_empty()
+            && document_closed
+            && !in_document
+            && saw_document_root
+            && document_namespace_ok
+            && saw_credit_transfer
     }
 
     /// Verifies an external settlement trigger inside the TEE boundary.
@@ -294,5 +543,27 @@ mod tests {
         assert_eq!(proposal.timelock_height, 840000 + 144);
         assert_eq!(proposal.yield_split.productive_streaming_pct, 90);
         assert_eq!(proposal.status, ProposalStatus::Pending);
+    }
+
+    #[test]
+    fn test_rejects_iso20022_namespace_without_boundary() {
+        let registry = Arc::new(AssetRegistry::new());
+        let manager = SettlementManager::new(registry);
+
+        let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022evil:tech:xsd:pacs.008.001.08\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
+        let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
+
+        assert!(!manager.verify_trigger(&trigger).unwrap());
+    }
+
+    #[test]
+    fn test_rejects_iso20022_namespace_with_invalid_message_id() {
+        let registry = Arc::new(AssetRegistry::new());
+        let manager = SettlementManager::new(registry);
+
+        let payload = b"<?xml version=\"1.0\"?><Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08evil\"><FIToFICstmrCdtTrf></FIToFICstmrCdtTrf></Document>".to_vec();
+        let trigger = SettlementTrigger::new(TriggerSource::Iso20022, payload);
+
+        assert!(!manager.verify_trigger(&trigger).unwrap());
     }
 }
