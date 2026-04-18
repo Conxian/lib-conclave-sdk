@@ -83,6 +83,17 @@ impl ConxianJobCard {
             }
         }
 
+        let whole_all_zero = whole.chars().all(|c| c == '0');
+        let frac_all_zero = match frac {
+            None => true,
+            Some(f) => f.chars().all(|c| c == '0'),
+        };
+        if whole_all_zero && frac_all_zero {
+            return Err(ConclaveError::IsoError(
+                "ISO-422: amount_sBTC must be greater than zero".to_string(),
+            ));
+        }
+
         Ok(())
     }
 
@@ -222,6 +233,38 @@ mod tests {
             assert!(res.is_err(), "expected error for amount={amount:?}");
             match res {
                 Err(ConclaveError::IsoError(e)) => assert!(e.contains("ISO-422")),
+                _ => panic!("Expected ISO-422 error"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_amount_validation_rejects_zero_amounts() {
+        let invalid_amounts = [
+            "0",
+            "0.0",
+            "000000",
+            "000000.0",
+            "000000.00000000",
+            "0.00000000",
+        ];
+
+        for amount in invalid_amounts {
+            let card = ConxianJobCard::new(
+                "SP1...",
+                "SP2...",
+                amount.to_string(),
+                Some("Johannesburg".to_string()),
+                Some("ZA".to_string()),
+            );
+
+            let res = card.validate();
+            assert!(res.is_err(), "expected error for amount={amount:?}");
+            match res {
+                Err(ConclaveError::IsoError(e)) => {
+                    assert!(e.contains("ISO-422"));
+                    assert!(e.contains("greater than zero"));
+                }
                 _ => panic!("Expected ISO-422 error"),
             }
         }
