@@ -13,7 +13,7 @@ The following `unwrap()` calls were identified in production source code during 
 - `src/state/mod.rs:97`: `self.nodes.last().unwrap().hash`
 
 ## Files changed
-- `src/enclave/cloud.rs`: Replaced `unwrap()` with `ConclaveError::InvalidPayload`.
+- `src/enclave/cloud.rs`: Replaced `unwrap()` with `ConclaveError::InvalidPayload` and fixed Clippy deref warnings.
 - `src/enclave/android_strongbox.rs`: Handled Mutex poisoning in `is_initialized` (other methods already handled it).
 - `src/state/mod.rs`: Replaced `unwrap()` in `get_root` with safe pattern matching.
 - `CHANGELOG.md`: Documented the enforcement of "No-Panic" standards.
