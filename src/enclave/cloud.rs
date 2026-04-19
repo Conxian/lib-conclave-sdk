@@ -142,7 +142,11 @@ impl EnclaveManager for CloudEnclave {
 
         let secp = Secp256k1::new();
         let secret_key = self.get_active_key()?;
-        let message_bytes: [u8; 32] = request.message_hash.clone().try_into().unwrap();
+        let message_bytes: [u8; 32] = request
+            .message_hash
+            .clone()
+            .try_into()
+            .map_err(|_| ConclaveError::InvalidPayload)?;
         let message = Message::from_digest(message_bytes);
 
         let sig = secp.sign_ecdsa(message, &secret_key);
