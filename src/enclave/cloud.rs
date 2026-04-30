@@ -153,11 +153,13 @@ impl EnclaveManager for CloudEnclave {
         let public_key = PublicKey::from_secret_key(&secp, &secret_key);
 
         let attestation = self.generate_attestation_report(&request.message_hash);
+        let attestation_json = serde_json::to_string(&attestation)
+            .map_err(|e| ConclaveError::CryptoError(format!("Serialization error: {}", e)))?;
 
         Ok(SignResponse {
             signature_hex: hex::encode(sig.serialize_compact()),
             public_key_hex: hex::encode(public_key.serialize()),
-            device_attestation: Some(serde_json::to_string(&attestation).unwrap_or_default()),
+            device_attestation: Some(attestation_json),
         })
     }
 }

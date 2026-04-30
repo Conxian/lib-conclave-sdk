@@ -124,11 +124,13 @@ impl CoreEnclaveManager {
 
         let public_key = secret_key.public_key(&secp);
         let attestation = self.generate_attestation(message_hash);
+        let attestation_json = serde_json::to_string(&attestation)
+            .map_err(|e| ConclaveError::CryptoError(format!("Serialization error: {}", e)))?;
 
         Ok(SignResponse {
             signature_hex: hex::encode(final_sig),
             public_key_hex: hex::encode(public_key.serialize()),
-            device_attestation: Some(serde_json::to_string(&attestation).unwrap_or_default()),
+            device_attestation: Some(attestation_json),
         })
     }
 
@@ -164,11 +166,13 @@ impl CoreEnclaveManager {
         let signature: k256::schnorr::Signature = signing_key.sign(message_hash);
         let verify_key = signing_key.verifying_key();
         let attestation = self.generate_attestation(message_hash);
+        let attestation_json = serde_json::to_string(&attestation)
+            .map_err(|e| ConclaveError::CryptoError(format!("Serialization error: {}", e)))?;
 
         Ok(SignResponse {
             signature_hex: hex::encode(signature.to_bytes()),
             public_key_hex: hex::encode(verify_key.to_bytes()),
-            device_attestation: Some(serde_json::to_string(&attestation).unwrap_or_default()),
+            device_attestation: Some(attestation_json),
         })
     }
 }

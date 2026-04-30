@@ -240,7 +240,7 @@ impl SovereignHandshake for RailProxy {
         let mut hasher = Sha256::new();
         hasher.update(rail_name.as_bytes());
         hasher.update(b":");
-        hasher.update(&request.get_hash_bytes());
+        hasher.update(request.get_hash_bytes());
         hasher.update(b":");
         if let Some(ctx) = &chain_context {
             hasher.update(ctx.as_bytes());
@@ -315,8 +315,14 @@ mod tests {
 
     #[test]
     fn test_swap_request_hash_determinism() {
-        let from_asset = AssetIdentifier { chain: Chain::BITCOIN, symbol: "BTC".to_string() };
-        let to_asset = AssetIdentifier { chain: Chain::ETHEREUM, symbol: "ETH".to_string() };
+        let from_asset = AssetIdentifier {
+            chain: Chain::BITCOIN,
+            symbol: "BTC".to_string(),
+        };
+        let to_asset = AssetIdentifier {
+            chain: Chain::ETHEREUM,
+            symbol: "ETH".to_string(),
+        };
 
         let mut metadata1 = HashMap::new();
         metadata1.insert("a".to_string(), "1".to_string());
