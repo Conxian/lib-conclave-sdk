@@ -71,7 +71,7 @@ mod tests {
         assert_eq!(proof.position, 1);
         assert!(!proof.root.is_empty());
         // For a single leaf, the proof path is empty
-        assert!(!proof.proof.is_empty());
+        assert!(proof.proof.is_empty());
 
         Ok(())
     }
