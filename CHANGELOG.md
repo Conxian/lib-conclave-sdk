@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Rootstock (RSK) and BOB (Bitcoin on Build) support in `Chain` and `AssetRegistry`.
+- `BitcoinManager` in `src/protocol/bitcoin.rs` for BDK-compatible descriptor generation (SegWit/Taproot).
+- `sign_bitvm_challenge` in `TaprootManager` to support BitVM-style interactions.
+- Comprehensive unit tests for Bitcoin L2 registration and wallet logic.
+
 ## [0.1.3] - 2026-04-29
 
 ### Fixed

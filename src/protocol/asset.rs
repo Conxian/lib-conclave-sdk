@@ -13,6 +13,8 @@ pub enum Chain {
     ARBITRUM,
     BASE,
     LIGHTNING,
+    ROOTSTOCK,
+    BOB,
 }
 
 impl Chain {
@@ -26,6 +28,8 @@ impl Chain {
             Chain::ARBITRUM => "ARBITRUM",
             Chain::BASE => "BASE",
             Chain::LIGHTNING => "LIGHTNING",
+            Chain::ROOTSTOCK => "ROOTSTOCK",
+            Chain::BOB => "BOB",
         }
     }
 }
@@ -164,6 +168,32 @@ impl AssetRegistry {
             AssetMetadata {
                 name: "Lightning Bitcoin".to_string(),
                 decimals: 8,
+                contract_address: None,
+                active: true,
+            },
+        );
+
+        registry.insert(
+            AssetIdentifier {
+                chain: Chain::ROOTSTOCK,
+                symbol: "RBTC".to_string(),
+            },
+            AssetMetadata {
+                name: "Smart Bitcoin".to_string(),
+                decimals: 18,
+                contract_address: None,
+                active: true,
+            },
+        );
+
+        registry.insert(
+            AssetIdentifier {
+                chain: Chain::BOB,
+                symbol: "BTC".to_string(),
+            },
+            AssetMetadata {
+                name: "BOB Bitcoin".to_string(),
+                decimals: 18,
                 contract_address: None,
                 active: true,
             },

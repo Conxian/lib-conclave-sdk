@@ -14,3 +14,5 @@ pub mod settlement_service;
 pub mod sidl;
 pub mod stacks;
 pub mod zkml;
+pub mod asset_tests;
+pub mod bitcoin_tests;
