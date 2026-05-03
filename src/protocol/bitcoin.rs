@@ -5,6 +5,7 @@ use crate::{
 use bitcoin::XOnlyPublicKey;
 use bitcoin::hashes::{Hash, HashEngine, sha256t};
 use bitcoin::taproot::TapLeafHash;
+use std::sync::Arc;
 
 /// Native Bitcoin Taproot (BIP341) Manager.
 /// Superior implementation handling Tweak logic natively within the Conclave ethos.
@@ -92,6 +93,18 @@ impl<'a> TaprootManager<'a> {
     ) -> ConclaveResult<String> {
         self.sign_taproot_sighash(leaf_hash.to_byte_array(), derivation_path, key_id)
     }
+
+    /// BitVM-style challenge signing helper.
+    pub fn sign_bitvm_challenge(
+        &self,
+        challenge_hash: [u8; 32],
+        derivation_path: &str,
+        key_id: &str,
+    ) -> ConclaveResult<String> {
+        // BitVM challenges often require specific sighash flags or tweaks,
+        // but at the base layer they are Taproot signatures.
+        self.sign_taproot_sighash(challenge_hash, derivation_path, key_id)
+    }
 }
 
 pub struct TapTweakTag;
@@ -100,5 +113,33 @@ impl sha256t::Tag for TapTweakTag {
         let mut engine = bitcoin::hashes::sha256::Hash::engine();
         engine.input(b"TapTweak");
         engine
+    }
+}
+
+/// BitcoinManager integrates BDK for descriptor-based wallet management.
+pub struct BitcoinManager {
+    enclave: Arc<dyn EnclaveManager>,
+}
+
+impl BitcoinManager {
+    pub fn new(enclave: Arc<dyn EnclaveManager>) -> Self {
+        Self { enclave }
+    }
+
+    /// Generates a SegWit (wpkh) descriptor using a key from the enclave.
+    pub fn generate_wpkh_descriptor(&self, derivation_path: &str) -> ConclaveResult<String> {
+        let pubkey_hex = self.enclave.get_public_key(derivation_path)?;
+        Ok(format!("wpkh({})", pubkey_hex))
+    }
+
+    /// Generates a Taproot (tr) descriptor using a key from the enclave.
+    pub fn generate_tr_descriptor(&self, derivation_path: &str) -> ConclaveResult<String> {
+        let pubkey_hex = self.enclave.get_public_key(derivation_path)?;
+        Ok(format!("tr({})", pubkey_hex))
+    }
+
+    /// Returns the TaprootManager for advanced signing operations.
+    pub fn taproot(&self) -> TaprootManager<'_> {
+        TaprootManager::new(self.enclave.as_ref())
     }
 }
