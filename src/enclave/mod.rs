@@ -22,6 +22,15 @@ pub struct SignResponse {
 }
 
 /// EnclaveManager trait for hardware-backed security modules.
+///
+/// # Security Warning
+/// The default implementations (`CoreEnclaveManager` and `CloudEnclave`) provided in this SDK
+/// are currently software simulations intended for development and testing. They report
+/// `AttestationLevel::Software` and will NOT pass production hardware attestation verification
+/// when `enforce_attestation` is enabled.
+///
+/// For production deployments, a hardware-bound driver (e.g., Android StrongBox or Azure SNP TEE)
+/// must be used.
 pub trait EnclaveManager: Send + Sync {
     /// Initialize the enclave, ensuring the hardware backend is available.
     fn initialize(&self) -> ConclaveResult<()>;
