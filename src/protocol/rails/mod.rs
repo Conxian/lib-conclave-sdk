@@ -185,7 +185,7 @@ impl RailProxy {
             serde_json::from_str(json).map_err(|e| format!("Invalid attestation format: {}", e))?;
 
         if !report.verify(&intent.signable_hash) {
-            return Err("Hardware attestation verification failed: Device integrity compromised or nonce mismatch".to_string());
+            return Err("Hardware attestation verification failed: Device integrity compromised, nonce mismatch, or attempting to use a Software/Simulated enclave for a high-value operation".to_string());
         }
 
         // Verify business attribution if present

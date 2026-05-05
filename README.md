@@ -27,6 +27,9 @@ The **Conclave SDK** provides a high-integrity integration surface for hardware-
 - **Multi-Chain Support**: Native support for ECDSA (EVM, Bitcoin, Stacks) and Schnorr (Taproot, RGB, BitVM).
 - **WebAssembly Bindings**: Fully compatible with WASM for browser and mobile integrations.
 
+> [!WARNING]
+> **Simulation Notice**: The default enclave drivers (`CoreEnclaveManager` and `CloudEnclave`) in this repository are software-based simulations. They report `AttestationLevel::Software` and are intended for development only. Production use requires hardware-bound drivers.
+
 ## Architecture
 
 The SDK is organized into three main layers:

@@ -94,7 +94,7 @@ impl CloudEnclave {
 
     fn generate_attestation_report(&self, challenge: &[u8]) -> DeviceIntegrityReport {
         DeviceIntegrityReport {
-            level: AttestationLevel::CloudTEE,
+            level: AttestationLevel::Software,
             challenge_nonce: challenge.to_vec(),
             signature: vec![0u8; 64], // Simulated signature
             certificate_chain: vec![

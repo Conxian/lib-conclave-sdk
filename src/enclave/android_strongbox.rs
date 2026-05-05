@@ -74,7 +74,7 @@ impl CoreEnclaveManager {
 
     fn generate_attestation(&self, challenge: &[u8]) -> DeviceIntegrityReport {
         DeviceIntegrityReport {
-            level: AttestationLevel::StrongBox,
+            level: AttestationLevel::Software,
             challenge_nonce: challenge.to_vec(),
             signature: vec![0u8; 64],
             certificate_chain: vec![
