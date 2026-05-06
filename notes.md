@@ -1,17 +1,16 @@
-# Audit Notes - System Alignment & Enhancements (v1.9.3)
+# Audit Notes - Mainnet Readiness & SDK Pivot
 
 ## Task
-Perform full system review, align enhancements, and ensure Mainnet readiness across all core SDK modules. Remediate dependency conflicts and integrate optional telemetry tracking.
+Standardize repository hygiene, align company positioning with the "Unified Vault SDK Pivot", and perform a Mainnet Readiness audit for fail-open logic (CON-627, CON-632, CON-633, CON-625).
 
 ## Evidence
-- **Dependency Remediation**: Fixed build failures by aligning `getrandom` (0.2.15) and `pbkdf2` (0.12.2) versions. Locked `sha2` to 0.10.9 for `RUSTSEC-2025-0055`.
-- **Telemetry Integration**: Added `TelemetryClient` to `RailProxy` for non-blocking signature tracking via Conxian Nexus.
-- **WASM Enhancements**: Updated `ConclaveWasmClient` constructor to support Nexus orchestration and fixed `DlcManager` enclave access.
-- **Error Handling**: Introduced `RailError` and refined `NetworkError` variants for institutional-grade reliability.
-- **Protocol Validation**: Verified functional logic for `IdentityManager`, `ZkmlService`, `DlcManager`, and `SidlService`.
-- **Security Baseline**: Confirmed 'No-Panic' compliance and `zeroize` integration in all hardware signing paths.
+- **SDK Audit (CON-627)**: Conducted a formal viability audit for SDK extraction. Findings documented in `docs/CON-627_AUDIT_FINDINGS.md`. Verified high modularity and zero UI coupling.
+- **Positioning (CON-632)**: Rewrote `README.md` and `docs/ETHOS.md` to focus on "Native Bitcoin Application Infrastructure". Demoted legacy retail dapp framing.
+- **SDK Primitives (CON-633)**: Defined the GTM V1 primitive: Hardware-Backed Bitcoin Signing & Policy. Documented in `docs/SDK_PRIMITIVES.md`.
+- **Mainnet Audit (CON-625)**: Audited protocol and enclave libraries for fail-open/simulated behavior. Findings documented in `docs/CON-625_MAINNET_AUDIT.md`.
+- **Hygiene**: Cleaned up merged local branches. Pinning `getrandom` and resolving `digest` trait version conflicts in `Cargo.toml`.
 
 ## Validation
-- `cargo test` passed with 34 tests (100% pass rate).
-- Verified telemetry integration with async test case.
-- Confirmed mainnet principal (`SP...`) integrity in all Clarity contracts.
+- `cargo test` passed with 33 tests.
+- Verified functional inclusion proof generation for MMR.
+- Manual verification of attestation serialization in SignResponse.
