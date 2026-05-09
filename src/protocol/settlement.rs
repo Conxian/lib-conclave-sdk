@@ -512,6 +512,8 @@ impl SettlementManager {
             "ARBITRUM" => Chain::ARBITRUM,
             "BASE" => Chain::BASE,
             "LIGHTNING" => Chain::LIGHTNING,
+            "ROOTSTOCK" => Chain::ROOTSTOCK,
+            "BOB" => Chain::BOB,
             _ => return Err(ConclaveError::InvalidPayload),
         };
 
