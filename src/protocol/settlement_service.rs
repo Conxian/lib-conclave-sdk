@@ -150,12 +150,18 @@ mod tests {
             .await
             .unwrap();
 
-        let reconciled = svc.verify_reconciliation(&proposal, &trigger).await.unwrap();
+        let reconciled = svc
+            .verify_reconciliation(&proposal, &trigger)
+            .await
+            .unwrap();
         assert!(reconciled);
 
         // Tamper with trigger
         let bad_trigger = SettlementTrigger::new(TriggerSource::Iso20022, b"tampered".to_vec());
-        let reconciled = svc.verify_reconciliation(&proposal, &bad_trigger).await.unwrap();
+        let reconciled = svc
+            .verify_reconciliation(&proposal, &bad_trigger)
+            .await
+            .unwrap();
         assert!(!reconciled);
     }
 }

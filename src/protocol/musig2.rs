@@ -16,8 +16,9 @@ impl MuSig2Session {
         let keys: Vec<musig2::secp256k1::PublicKey> = pubkeys
             .iter()
             .map(|pk| {
-                musig2::secp256k1::PublicKey::from_slice(&pk.serialize())
-                    .map_err(|e| ConclaveError::CryptoError(format!("Invalid pubkey for MuSig2: {e:?}")))
+                musig2::secp256k1::PublicKey::from_slice(&pk.serialize()).map_err(|e| {
+                    ConclaveError::CryptoError(format!("Invalid pubkey for MuSig2: {e:?}"))
+                })
             })
             .collect::<Result<Vec<_>, _>>()?;
         let key_agg_ctx = KeyAggContext::new(keys)
@@ -45,7 +46,9 @@ impl MuSig2Session {
     ) -> ConclaveResult<PartialSignature> {
         let aggr_nonce = AggNonce::sum(&pub_nonces);
         let musig_sk = musig2::secp256k1::SecretKey::from_byte_array(secret_key.to_secret_bytes())
-            .map_err(|e| ConclaveError::CryptoError(format!("Invalid secret key for MuSig2: {e:?}")))?;
+            .map_err(|e| {
+                ConclaveError::CryptoError(format!("Invalid secret key for MuSig2: {e:?}"))
+            })?;
 
         musig2::sign_partial::<PartialSignature>(
             &self.key_agg_ctx,
