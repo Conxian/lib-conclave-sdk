@@ -4,7 +4,7 @@ use crate::{
     enclave::{EnclaveManager, SignRequest, SignResponse},
 };
 use rand::Rng;
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use secp256k1::{Message, Secp256k1, SecretKey};
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::{Zeroize, Zeroizing};
 
@@ -44,7 +44,7 @@ impl CloudEnclave {
     pub fn with_dev_key(mut self, key_bytes: [u8; 32]) -> ConclaveResult<Self> {
         let dev_key_bytes = Zeroizing::new(key_bytes);
 
-        let mut dev_key = SecretKey::from_byte_array(*dev_key_bytes)
+        let mut dev_key = SecretKey::from_secret_bytes(*dev_key_bytes)
             .map_err(|e| ConclaveError::CryptoError(format!("Invalid dev key: {e}")))?;
         dev_key.non_secure_erase();
 
@@ -88,7 +88,7 @@ impl CloudEnclave {
             None => &self.simulated_kms_key_bytes,
         };
 
-        SecretKey::from_byte_array(*key_bytes)
+        SecretKey::from_secret_bytes(*key_bytes)
             .map_err(|e| ConclaveError::CryptoError(format!("SEC1 Error: {e}")))
     }
 
@@ -129,9 +129,9 @@ impl EnclaveManager for CloudEnclave {
     }
 
     fn get_public_key(&self, _derivation_path: &str) -> ConclaveResult<String> {
-        let secp = Secp256k1::new();
+        let _secp = Secp256k1::new();
         let secret_key = self.get_active_key()?;
-        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+        let public_key = secret_key.public_key();
         Ok(hex::encode(public_key.serialize()))
     }
 
@@ -140,7 +140,7 @@ impl EnclaveManager for CloudEnclave {
             return Err(ConclaveError::InvalidPayload);
         }
 
-        let secp = Secp256k1::new();
+        let _secp = Secp256k1::new();
         let secret_key = self.get_active_key()?;
         let message_bytes: [u8; 32] = request
             .message_hash
@@ -149,8 +149,8 @@ impl EnclaveManager for CloudEnclave {
             .map_err(|_| ConclaveError::InvalidPayload)?;
         let message = Message::from_digest(message_bytes);
 
-        let sig = secp.sign_ecdsa(message, &secret_key);
-        let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+        let sig = secp256k1::ecdsa::sign(message, &secret_key);
+        let public_key = secret_key.public_key();
 
         let attestation = self.generate_attestation_report(&request.message_hash);
         let attestation_json = serde_json::to_string(&attestation)

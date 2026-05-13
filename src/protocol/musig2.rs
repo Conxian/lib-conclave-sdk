@@ -13,9 +13,15 @@ pub struct MuSig2Session {
 
 impl MuSig2Session {
     pub fn new(pubkeys: &[PublicKey]) -> ConclaveResult<Self> {
-        let keys: Vec<PublicKey> = pubkeys.to_vec();
+        let keys: Vec<musig2::secp256k1::PublicKey> = pubkeys
+            .iter()
+            .map(|pk| {
+                musig2::secp256k1::PublicKey::from_slice(&pk.serialize())
+                    .map_err(|e| ConclaveError::CryptoError(format!("Invalid pubkey for MuSig2: {e:?}")))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let key_agg_ctx = KeyAggContext::new(keys)
-            .map_err(|e| ConclaveError::CryptoError(format!("MuSig2 KeyAgg failed: {:?}", e)))?;
+            .map_err(|e| ConclaveError::CryptoError(format!("MuSig2 KeyAgg failed: {e:?}")))?;
         Ok(Self { key_agg_ctx })
     }
 
@@ -38,15 +44,17 @@ impl MuSig2Session {
         message: [u8; 32],
     ) -> ConclaveResult<PartialSignature> {
         let aggr_nonce = AggNonce::sum(&pub_nonces);
+        let musig_sk = musig2::secp256k1::SecretKey::from_byte_array(secret_key.to_secret_bytes())
+            .map_err(|e| ConclaveError::CryptoError(format!("Invalid secret key for MuSig2: {e:?}")))?;
 
         musig2::sign_partial::<PartialSignature>(
             &self.key_agg_ctx,
-            *secret_key,
+            musig_sk,
             sec_nonce,
             &aggr_nonce,
             message,
         )
-        .map_err(|e| ConclaveError::CryptoError(format!("MuSig2 signing failed: {:?}", e)))
+        .map_err(|e| ConclaveError::CryptoError(format!("MuSig2 signing failed: {e:?}")))
     }
 
     pub fn aggregate_signatures(
@@ -60,7 +68,7 @@ impl MuSig2Session {
         let final_sig: CompactSignature =
             aggregate_partial_signatures(&self.key_agg_ctx, &aggr_nonce, partial_sigs, message)
                 .map_err(|e| {
-                    ConclaveError::CryptoError(format!("MuSig2 aggregation failed: {:?}", e))
+                    ConclaveError::CryptoError(format!("MuSig2 aggregation failed: {e:?}"))
                 })?;
 
         Ok(final_sig.serialize().to_vec())
