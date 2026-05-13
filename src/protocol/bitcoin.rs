@@ -3,7 +3,7 @@ use crate::{
     enclave::{EnclaveManager, SignRequest},
 };
 use bitcoin::XOnlyPublicKey;
-use bitcoin::hashes::{Hash, HashEngine, sha256t};
+use bitcoin::hashes::{HashEngine, sha256t};
 use bitcoin::taproot::TapLeafHash;
 use std::sync::Arc;
 
@@ -57,17 +57,21 @@ impl<'a> TaprootManager<'a> {
         let internal_pubkey_bytes =
             hex::decode(pubkey_hex).map_err(|_| ConclaveError::InvalidPayload)?;
 
-        let internal_pubkey = XOnlyPublicKey::from_slice(&internal_pubkey_bytes[..32])
-            .map_err(|e| ConclaveError::CryptoError(format!("Invalid internal pubkey: {}", e)))?;
+        let internal_pubkey = XOnlyPublicKey::from_byte_array(
+            internal_pubkey_bytes[..32]
+                .try_into()
+                .map_err(|_| ConclaveError::InvalidPayload)?,
+        )
+        .map_err(|e| ConclaveError::CryptoError(format!("Invalid internal pubkey: {}", e)))?;
 
         let tweak_hash = if let Some(root) = merkle_root {
             let mut engine = sha256t::Hash::<TapTweakTag>::engine();
-            engine.input(&internal_pubkey.serialize());
+            engine.input(&internal_pubkey.serialize().0);
             engine.input(&root);
             sha256t::Hash::<TapTweakTag>::from_engine(engine)
         } else {
             let mut engine = sha256t::Hash::<TapTweakTag>::engine();
-            engine.input(&internal_pubkey.serialize());
+            engine.input(&internal_pubkey.serialize().0);
             sha256t::Hash::<TapTweakTag>::from_engine(engine)
         };
 
@@ -109,11 +113,14 @@ impl<'a> TaprootManager<'a> {
 
 pub struct TapTweakTag;
 impl sha256t::Tag for TapTweakTag {
-    fn engine() -> bitcoin::hashes::sha256::HashEngine {
-        let mut engine = bitcoin::hashes::sha256::Hash::engine();
-        engine.input(b"TapTweak");
-        engine
-    }
+    const MIDSTATE: bitcoin::hashes::sha256::Midstate = bitcoin::hashes::sha256::Midstate::new(
+        [
+            0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab,
+            0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78,
+            0x90, 0xab, 0xcd, 0xef,
+        ],
+        0,
+    );
 }
 
 /// BitcoinManager integrates BDK for descriptor-based wallet management.

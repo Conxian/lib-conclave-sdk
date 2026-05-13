@@ -3,7 +3,7 @@ use crate::{
     enclave::{EnclaveManager, SignRequest},
 };
 use rand::Rng;
-use secp256k1::{Message, PublicKey, Secp256k1, ecdsa::Signature};
+use secp256k1::{Message, PublicKey, ecdsa::Signature};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;
@@ -51,7 +51,6 @@ impl BusinessAttribution {
 
     /// Verifies the cryptographic signature of the attribution against a public key.
     pub fn verify(&self, public_key_hex: &str) -> ConclaveResult<()> {
-        let secp = Secp256k1::new();
         let hash = self.get_hash();
 
         let message_bytes: [u8; 32] = hash
@@ -72,7 +71,7 @@ impl BusinessAttribution {
             .or_else(|_| Signature::from_der(&signature_bytes))
             .map_err(|_| ConclaveError::CryptoError("Invalid signature format".to_string()))?;
 
-        if secp.verify_ecdsa(message, &signature, &public_key).is_ok() {
+        if secp256k1::ecdsa::verify(&signature, message, &public_key).is_ok() {
             Ok(())
         } else {
             Err(ConclaveError::CryptoError(
